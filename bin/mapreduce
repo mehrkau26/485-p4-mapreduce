@@ -6,10 +6,10 @@ usage() {
   echo "Usage: $0 (start|status|stop|restart)"
 }
 
-#LOG_DIR ="var/log"
-#MANAGER_LOG="$LOG_DIR/manager.log"
-#WORKER1_LOG="$LOG_DIR/worker-6001.log"
-#WORKER2_LOG="$OG_DIR/worker-6002.log"
+LOG_DIR="var/log"
+MANAGER_LOG="$LOG_DIR/manager.log"
+WORKER1_LOG="$LOG_DIR/worker-6001.log"
+WORKER2_LOG="$OG_DIR/worker-6002.log"
 
 if [ $# -ne 1 ]; then
   usage
