@@ -34,10 +34,11 @@ class Worker:
             # Handle shutdown logic
                 signals["shutdown"] = True
                 thread.join()
+                thread.close()
 
 
-        signals = {"shutdown": False}
-        thread = threading.Thread(target=tcp_server, args=(host, port, signals, worker_message))
+        self.signals = {"shutdown": False}
+        thread = threading.Thread(target=tcp_server, args=(host, port, self.signals, worker_message))
         thread.start()
 
         #while True:

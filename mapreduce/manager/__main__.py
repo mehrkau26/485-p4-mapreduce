@@ -26,19 +26,11 @@ class Manager:
             "Starting manager host=%s port=%s pwd=%s",
             host, port, os.getcwd(),
         )
-
-        # This is a fake message to demonstrate pretty printing with logging
-        message_dict = {
-            "message_type": "register",
-            "worker_host": "localhost",
-            "worker_port": 6001,
-        }
-        LOGGER.debug("TCP recv\n%s", json.dumps(message_dict, indent=2))
-        signals = {"shutdown": False}
-        def manager_message():
-            if message["message_type"] == "shutdown":
+        self.signals = {"shutdown": False}
+        def manager_message(message_dict):
+            if message_dict["message_type"] == "shutdown":
             # Handle shutdown logic
-                signals["shutdown"] = True
+                self.signals["shutdown"] = True
                 thread.join()
                 for worker in Worker:
                     worker_host = worker["host"]
@@ -46,7 +38,7 @@ class Manager:
                     tcp_client(worker_host, worker_port, "shutdown")
                 thread.close()
 
-        thread = threading.Thread(target=tcp_server, args=(host, port, signals, manager_message))
+        thread = threading.Thread(target=tcp_server, args=(host, port, self.signals, manager_message))
         thread.start()
 
 @click.command()
