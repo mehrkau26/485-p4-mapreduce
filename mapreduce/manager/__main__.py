@@ -67,8 +67,9 @@ def main(host, port, logfile, loglevel, shared_dir):
     signals = {"shutdown": False}
     thread = threading.Thread(target=server, args=(signals,))
     thread.start()
-    message = tcp_server(host, port, signals)
+    
     while True:
+        message = tcp_server(host, port, signals)
         if message["message_type"] == "shutdown":
             # Handle shutdown logic
             signals["shutdown"] = True
@@ -78,6 +79,8 @@ def main(host, port, logfile, loglevel, shared_dir):
                 worker_host = worker['host']
                 worker_port = worker['port']
                 tcp_client(worker_host, worker_port, "shutdown")
+            thread.close()
+
 
 
 if __name__ == "__main__":

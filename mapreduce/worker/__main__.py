@@ -65,6 +65,15 @@ def main(host, port, manager_host, manager_port, logfile, loglevel):
     thread.start()
 
     
+    while True:
+        message = tcp_server(host, port, signals)
+        if message["message_type"] == "shutdown":
+            # Handle shutdown logic
+            signals["shutdown"] = True
+            thread.join()
+
+
+
 
 
 if __name__ == "__main__":

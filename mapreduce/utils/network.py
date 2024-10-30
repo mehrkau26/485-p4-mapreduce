@@ -81,4 +81,7 @@ def udp_server(host, port, signals, handle_func):
 def udp_client(host, port, message):
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.connect((host, port))
+
+        # Send a message
+        message = json.dumps({"hello": "world"})
         sock.sendall(message.encode('utf-8'))
