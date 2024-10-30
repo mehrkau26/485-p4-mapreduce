@@ -39,6 +39,14 @@ class Manager:
         # exit immediately!
         LOGGER.debug("IMPLEMENT ME!")
         time.sleep(120)
+    
+    #def shutdown(self, message):
+
+    def handle_func(self, message):
+        message_type = message.get("type")
+        if message_type == "shutdown":
+            self.shutdown(message)
+            # smth.close()
 
 
 @click.command()
@@ -63,7 +71,7 @@ def main(host, port, logfile, loglevel, shared_dir):
     root_logger.setLevel(loglevel.upper())
     Manager(host, port)
 
-    print("main() starting")
+    LOGGER.info("main() starting")
     signals = {"shutdown": False}
     thread = threading.Thread(target=tcp_server, args=(signals,))
     thread.start()
