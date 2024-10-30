@@ -28,23 +28,20 @@ class Worker:
             "manager_host=%s manager_port=%s",
             manager_host, manager_port,
         )
-
-        def worker_message():
-            if message["message_type"] == "shutdown":
-            # Handle shutdown logic
-                signals["shutdown"] = True
-                thread.join()
-                thread.close()
-
-
         self.signals = {"shutdown": False}
-        thread = threading.Thread(target=tcp_server, args=(host, port, self.signals, worker_message))
-        thread.start()
+        def worker_message(message_dict):
+            if message_dict["message_type"] == "shutdown":
+            # Handle shutdown logic
+                self.signals["shutdown"] = True
+                
+                #thread.close()
 
-        #while True:
-            #message = tcp_server(manager_host, manager_port, signals, handle_func=worker_message)
 
         
+        thread = threading.Thread(target=tcp_server, args=(host, port, self.signals, worker_message))
+        thread.start()
+        thread.join()
+
         # This is a fake message to demonstrate pretty printing with logging
         message_dict = {
             "message_type": "register_ack",

@@ -16,7 +16,7 @@ def tcp_server(host, port, signals, handle_func):
 
         sock.settimeout(1)
         
-        while True:
+        while not signals["shutdown"]:
             try:
                 clientsocket, address = sock.accept()
             except socket.timeout:
@@ -54,7 +54,7 @@ def tcp_server(host, port, signals, handle_func):
                 except json.JSONDecodeError:
                     continue
                 handle_func(message_dict)
-
+        print("thread has been terminated")
 
 def tcp_client(host, port, message):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:

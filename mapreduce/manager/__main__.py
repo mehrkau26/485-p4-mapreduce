@@ -30,16 +30,16 @@ class Manager:
         def manager_message(message_dict):
             if message_dict["message_type"] == "shutdown":
             # Handle shutdown logic
-                self.signals["shutdown"] = True
-                thread.join()
                 for worker in Worker:
                     worker_host = worker["host"]
                     worker_port = worker["port"]
-                    tcp_client(worker_host, worker_port, "shutdown")
-                thread.close()
+                    tcp_client(worker_host, worker_port, message_dict)
+                #thread.close()
+                self.signals["shutdown"] = True
 
         thread = threading.Thread(target=tcp_server, args=(host, port, self.signals, manager_message))
         thread.start()
+        thread.join()
 
 @click.command()
 @click.option("--host", "host", default="localhost")
