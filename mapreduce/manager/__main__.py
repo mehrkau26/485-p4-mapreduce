@@ -34,20 +34,20 @@ class Manager:
             "worker_port": 6001,
         }
         LOGGER.debug("TCP recv\n%s", json.dumps(message_dict, indent=2))
+        signals = {"shutdown": False}
+        def manager_message():
+            if message["message_type"] == "shutdown":
+            # Handle shutdown logic
+                signals["shutdown"] = True
+                thread.join()
+                for worker in Worker:
+                    worker_host = worker["host"]
+                    worker_port = worker["port"]
+                    tcp_client(worker_host, worker_port, "shutdown")
+                thread.close()
 
-        # TODO: you should remove this. This is just so the program doesn't
-        # exit immediately!
-        LOGGER.debug("IMPLEMENT ME!")
-        time.sleep(120)
-    
-    #def shutdown(self, message):
-
-    def handle_func(self, message):
-        message_type = message.get("type")
-        if message_type == "shutdown":
-            self.shutdown(message)
-            # smth.close()
-
+        thread = threading.Thread(target=tcp_server, args=(host, port, signals, manager_message))
+        thread.start()
 
 @click.command()
 @click.option("--host", "host", default="localhost")
@@ -71,24 +71,13 @@ def main(host, port, logfile, loglevel, shared_dir):
     root_logger.setLevel(loglevel.upper())
     Manager(host, port)
 
-    LOGGER.info("main() starting")
-    signals = {"shutdown": False}
-    thread = threading.Thread(target=tcp_server, args=(signals,))
-    thread.start()
+    print("main() starting")
     
 
-    while True:
-        message = tcp_server(host, port, signals)
-        if message["message_type"] == "shutdown":
-            # Handle shutdown logic
-            signals["shutdown"] = True
-            thread.join()
-            #LOGGER.info("main() shutting down")
-            for worker in Worker:
-                worker_host = worker['host']
-                worker_port = worker['port']
-                tcp_client(worker_host, worker_port, "shutdown")
-            thread.close()
+    
+    
+
+   
 
 
 

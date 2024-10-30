@@ -53,7 +53,7 @@ def tcp_server(host, port, signals, handle_func):
                     message_dict = json.loads(message_str)
                 except json.JSONDecodeError:
                     continue
-                print(message_dict)
+                handle_func(message_dict)
 
 
 def tcp_client(host, port, message):

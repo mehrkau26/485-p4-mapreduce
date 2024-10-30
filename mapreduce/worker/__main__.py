@@ -29,6 +29,21 @@ class Worker:
             manager_host, manager_port,
         )
 
+        def worker_message():
+            if message["message_type"] == "shutdown":
+            # Handle shutdown logic
+                signals["shutdown"] = True
+                thread.join()
+
+
+        signals = {"shutdown": False}
+        thread = threading.Thread(target=tcp_server, args=(host, port, signals, worker_message))
+        thread.start()
+
+        #while True:
+            #message = tcp_server(manager_host, manager_port, signals, handle_func=worker_message)
+
+        
         # This is a fake message to demonstrate pretty printing with logging
         message_dict = {
             "message_type": "register_ack",
@@ -36,7 +51,6 @@ class Worker:
             "worker_port": 6001,
         }
         LOGGER.debug("TCP recv\n%s", json.dumps(message_dict, indent=2))
-
 
 
 @click.command()
@@ -61,17 +75,7 @@ def main(host, port, manager_host, manager_port, logfile, loglevel):
 
 
     print("main() starting")
-    signals = {"shutdown": False}
-    thread = threading.Thread(target=server, args=(signals,))
-    thread.start()
-
     
-    while True:
-        message = tcp_server(host, port, signals)
-        if message["message_type"] == "shutdown":
-            # Handle shutdown logic
-            signals["shutdown"] = True
-            thread.join()
 
 
 
