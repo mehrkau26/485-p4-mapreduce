@@ -9,7 +9,7 @@ import time
 import click
 from mapreduce.utils.network import tcp_client
 from mapreduce.utils.network import tcp_server
-from worker import workers
+from mapreduce.worker.__main__ import Worker
 
 
 # Configure logging
@@ -65,9 +65,10 @@ def main(host, port, logfile, loglevel, shared_dir):
 
     print("main() starting")
     signals = {"shutdown": False}
-    thread = threading.Thread(target=server, args=(signals,))
+    thread = threading.Thread(target=tcp_server, args=(signals,))
     thread.start()
     
+
     while True:
         message = tcp_server(host, port, signals)
         if message["message_type"] == "shutdown":
@@ -75,7 +76,7 @@ def main(host, port, logfile, loglevel, shared_dir):
             signals["shutdown"] = True
             thread.join()
             #LOGGER.info("main() shutting down")
-            for worker in workers:
+            for worker in Worker:
                 worker_host = worker['host']
                 worker_port = worker['port']
                 tcp_client(worker_host, worker_port, "shutdown")
