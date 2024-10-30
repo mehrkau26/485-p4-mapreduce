@@ -59,5 +59,13 @@ def main(host, port, manager_host, manager_port, logfile, loglevel):
     Worker(host, port, manager_host, manager_port)
 
 
+    print("main() starting")
+    signals = {"shutdown": False}
+    thread = threading.Thread(target=server, args=(signals,))
+    thread.start()
+
+    
+
+
 if __name__ == "__main__":
     main()

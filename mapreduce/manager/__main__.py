@@ -1,11 +1,15 @@
 """MapReduce framework Manager node."""
+from http import server
 import os
 import tempfile
 import logging
 import json
+import threading
 import time
 import click
-import mapreduce.utils
+from mapreduce.utils.network import tcp_client
+from mapreduce.utils.network import tcp_server
+from worker import workers
 
 
 # Configure logging
@@ -58,6 +62,22 @@ def main(host, port, logfile, loglevel, shared_dir):
     root_logger.addHandler(handler)
     root_logger.setLevel(loglevel.upper())
     Manager(host, port)
+
+    print("main() starting")
+    signals = {"shutdown": False}
+    thread = threading.Thread(target=server, args=(signals,))
+    thread.start()
+    message = tcp_server(host, port, signals)
+    while True:
+        if message["message_type"] == "shutdown":
+            # Handle shutdown logic
+            signals["shutdown"] = True
+            thread.join()
+            #LOGGER.info("main() shutting down")
+            for worker in workers:
+                worker_host = worker['host']
+                worker_port = worker['port']
+                tcp_client(worker_host, worker_port, "shutdown")
 
 
 if __name__ == "__main__":
