@@ -10,6 +10,7 @@ import click
 from mapreduce.utils.network import tcp_client
 from mapreduce.utils.network import tcp_server
 from mapreduce.worker.__main__ import Worker
+from mapreduce.utils import ThreadSafeOrderedDict
 
 
 # Configure logging
@@ -27,15 +28,23 @@ class Manager:
             host, port, os.getcwd(),
         )
         self.signals = {"shutdown": False}
+        self.worker_dict = ThreadSafeOrderedDict()
         def manager_message(message_dict):
+            if message_dict["message_type"] == "register":
+                self.worker_dict[message_dict["worker_port"]] = {
+                    'host': message_dict["worker_host"],
+                    'status': 'Ready'
+                }
             if message_dict["message_type"] == "shutdown":
             # Handle shutdown logic
-                for worker in Worker:
-                    worker_host = worker["host"]
-                    worker_port = worker["port"]
+                for worker_port, worker_info in self.worker_dict.items():
+                    worker_host = worker_info["host"]
+                    worker_status = worker_info["status"]
                     tcp_client(worker_host, worker_port, message_dict)
-                #thread.close()
+                # thread.close()
                 self.signals["shutdown"] = True
+            if message_dict["message_type"] == # a job:
+                
 
         thread = threading.Thread(target=tcp_server, args=(host, port, self.signals, manager_message))
         thread.start()
