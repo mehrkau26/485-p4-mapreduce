@@ -24,40 +24,30 @@ def tcp_server(host, port, signals, handle_func):
             print("Connection from", address[0])
 
             clientsocket.settimeout(1)
+            with clientsocket:
+                message_chunks = []
+                while True:
+                    try:
+                        data = clientsocket.recv(4096)
+                    except socket.timeout:
+                        continue
+                    if not data:
+                        break
+                    message_chunks.append(data)
 
-            while not signals["shutdown"]:
-                print("waiting ...")
-                try:
-                    clientsocket, address = sock.accept()
-                except socket.timeout:
-                    continue
-                print("Connection from", address[0])
+            message_bytes = b''.join(message_chunks)
+            message_str = message_bytes.decode("utf-8")
 
-                clientsocket.settimeout(1)
-
-                with clientsocket:
-                    message_chunks = []
-                    while True:
-                        try:
-                            data = clientsocket.recv(4096)
-                        except socket.timeout:
-                            continue
-                        if not data:
-                            break
-                        message_chunks.append(data)
-
-                message_bytes = b''.join(message_chunks)
-                message_str = message_bytes.decode("utf-8")
-
-                try:
-                    message_dict = json.loads(message_str)
-                except json.JSONDecodeError:
-                    continue
-                handle_func(message_dict)
+            try:
+                message_dict = json.loads(message_str)
+            except json.JSONDecodeError:
+                continue
+            handle_func(message_dict)
         print("thread has been terminated")
 
-def tcp_client(host, port, message):
+def tcp_client(host, port, message_dict):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        message = json.dumps(message_dict)
         # connect to the server
         sock.connect((host, port))
 

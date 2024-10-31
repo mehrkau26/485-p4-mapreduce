@@ -39,8 +39,6 @@ class Worker:
                 self.signals["shutdown"] = True
                 
                 #thread.close()
-
-
         
         thread = threading.Thread(target=tcp_server, args=(host, port, self.signals, worker_message))
 
@@ -49,9 +47,9 @@ class Worker:
 
         # This is a fake message to demonstrate pretty printing with logging
         message_dict = {
-            "message_type": "register",
             "worker_host": host,
             "worker_port": port,
+            "message_type": "register"
         }
         LOGGER.debug("TCP recv\n%s", json.dumps(message_dict, indent=2))
         tcp_client(manager_host, manager_port, message_dict)

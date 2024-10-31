@@ -35,7 +35,7 @@ class Manager:
                     'host': message_dict["worker_host"],
                     'status': 'Ready'
                 }
-                print("worker added:" + self.worker_dict["worker_port"])
+                # print("worker added:" + self.worker_dict["worker_port"])
                 register_ack = {
                     "message_type": "register_ack"
                 }
