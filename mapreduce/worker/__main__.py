@@ -21,10 +21,13 @@ LOGGER = logging.getLogger(__name__)
 class Worker:
     """A class representing a Worker node in a MapReduce cluster."""
     def __init__(self, host, port, manager_host, manager_port):
+        self.host = host
+        self.port = port
+        
         """Construct a Worker instance and start listening for messages."""
         LOGGER.info(
             "Starting worker host=%s port=%s pwd=%s",
-            host, port, os.getcwd(),
+            self.host, self.port, os.getcwd(),
         )
         LOGGER.info(
             "manager_host=%s manager_port=%s",
@@ -34,7 +37,7 @@ class Worker:
         def worker_message(message_dict):
             if message_dict["message_type"] == "register_ack":
                 print("ack received from manager")
-                thread = threading.Thread(target=udp_server, args=(host, port, self.signals, worker_message))
+                thread = threading.Thread(target=udp_server, args=(self.host, self.port, self.signals, worker_message))
             if message_dict["message_type"] == "shutdown":
                 
             # Handle shutdown logic
@@ -42,15 +45,15 @@ class Worker:
                 
                 #thread.close()
         
-        thread = threading.Thread(target=tcp_server, args=(host, port, self.signals, worker_message))
+        thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, worker_message))
 
         thread.start()
         #thread.join()
 
         # This is a fake message to demonstrate pretty printing with logging
         message_dict = {
-            "worker_host": host,
-            "worker_port": port,
+            "worker_host": self.host,
+            "worker_port": self.port,
             "message_type": "register"
         }
         LOGGER.debug("TCP recv\n%s", json.dumps(message_dict, indent=2))

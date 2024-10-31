@@ -13,6 +13,7 @@ def tcp_server(host, port, signals, handle_func):
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
         sock.bind((host, port)) # binds socket to port
         sock.listen()
+        print(f"Server listening on {host}:{port}")
 
         sock.settimeout(1)
         
@@ -48,6 +49,7 @@ def tcp_server(host, port, signals, handle_func):
 def tcp_client(host, port, message_dict):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         message = json.dumps(message_dict)
+        print(f"Connecting to server at {host}:{port}")
         # connect to the server
         sock.connect((host, port))
 

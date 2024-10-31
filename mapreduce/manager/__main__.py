@@ -27,35 +27,36 @@ class Manager:
             "Starting manager host=%s port=%s pwd=%s",
             host, port, os.getcwd(),
         )
+        self.host = host
+        self.port = port
         self.signals = {"shutdown": False}
         self.worker_dict = ThreadSafeOrderedDict()
-        def manager_message(message_dict):
-            if message_dict["message_type"] == "register":
-                self.worker_dict[message_dict["worker_port"]] = {
-                    'host': message_dict["worker_host"],
-                    'status': 'Ready'
-                }
-                # print("worker added:" + self.worker_dict["worker_port"])
-                register_ack = {
-                    "message_type": "register_ack"
-                }
-                tcp_client(message_dict["worker_host"], message_dict["worker_port"], register_ack)
-                print("ack sent to worker")
-            if message_dict["message_type"] == "shutdown":
-            # Handle shutdown logic
-                for worker_port, worker_info in self.worker_dict.items():
-                    worker_host = worker_info["host"]
-                    worker_status = worker_info["status"]
-                    tcp_client(worker_host, worker_port, message_dict)
-                # thread.close()
-                self.signals["shutdown"] = True
-            # if message_dict["message_type"] == # a job:
+    def manager_message(self, message_dict):
+        if message_dict["message_type"] == "register":
+            self.worker_dict[message_dict["worker_port"]] = {
+                'host': message_dict["worker_host"],
+                'status': 'Ready'
+            }
+            # print("worker added:" + self.worker_dict["worker_port"])
+            register_ack = {
+                "message_type": "register_ack"
+            }
+            tcp_client(message_dict["worker_host"], message_dict["worker_port"], register_ack)
+            print("ack sent to worker")
+        if message_dict["message_type"] == "shutdown":
+        # Handle shutdown logic
+            for worker_port, worker_info in self.worker_dict.items():
+                worker_host = worker_info["host"]
+                worker_status = worker_info["status"]
+                tcp_client(worker_host, worker_port, message_dict)
+            # thread.close()
+            self.signals["shutdown"] = True
+        # if message_dict["message_type"] == # a job:
                 
-
-        thread = threading.Thread(target=tcp_server, args=(host, port, self.signals, manager_message))
+    def start_tcp_server(self):
+        thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, self.manager_message))
         thread.start()
-        thread.join()
-
+        
 @click.command()
 @click.option("--host", "host", default="localhost")
 @click.option("--port", "port", default=6000)
@@ -76,7 +77,8 @@ def main(host, port, logfile, loglevel, shared_dir):
     root_logger = logging.getLogger()
     root_logger.addHandler(handler)
     root_logger.setLevel(loglevel.upper())
-    Manager(host, port)
+    manager = Manager(host, port)
+    manager.start_tcp_server()
 
     print("main() starting")
     
