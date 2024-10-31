@@ -9,6 +9,8 @@ import time
 import click
 from mapreduce.utils.network import tcp_client
 from mapreduce.utils.network import tcp_server
+from mapreduce.utils.network import udp_server
+from mapreduce.utils.network import udp_client
 import mapreduce.utils
 
 
@@ -32,7 +34,7 @@ class Worker:
         def worker_message(message_dict):
             if message_dict["message_type"] == "register_ack":
                 print("ack received from manager")
-                thread = threading.Thread(target=udp_server, args=(host, port, self.signals, heartbeat_message))
+                thread = threading.Thread(target=udp_server, args=(host, port, self.signals, worker_message))
             if message_dict["message_type"] == "shutdown":
                 
             # Handle shutdown logic
@@ -43,7 +45,7 @@ class Worker:
         thread = threading.Thread(target=tcp_server, args=(host, port, self.signals, worker_message))
 
         thread.start()
-        thread.join()
+        #thread.join()
 
         # This is a fake message to demonstrate pretty printing with logging
         message_dict = {

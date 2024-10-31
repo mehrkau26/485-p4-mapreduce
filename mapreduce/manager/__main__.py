@@ -39,6 +39,7 @@ class Manager:
                 register_ack = {
                     "message_type": "register_ack"
                 }
+                tcp_client(message_dict["worker_host"], message_dict["worker_port"], register_ack)
                 print("ack sent to worker")
             if message_dict["message_type"] == "shutdown":
             # Handle shutdown logic
