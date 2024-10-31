@@ -30,7 +30,11 @@ class Worker:
         )
         self.signals = {"shutdown": False}
         def worker_message(message_dict):
+            if message_dict["message_type"] == "register_ack":
+                print("ack received from manager")
+                thread = threading.Thread(target=udp_server, args=(host, port, self.signals, heartbeat_message))
             if message_dict["message_type"] == "shutdown":
+                
             # Handle shutdown logic
                 self.signals["shutdown"] = True
                 
@@ -39,16 +43,19 @@ class Worker:
 
         
         thread = threading.Thread(target=tcp_server, args=(host, port, self.signals, worker_message))
+
         thread.start()
         thread.join()
 
         # This is a fake message to demonstrate pretty printing with logging
         message_dict = {
-            "message_type": "register_ack",
-            "worker_host": "localhost",
-            "worker_port": 6001,
+            "message_type": "register",
+            "worker_host": host,
+            "worker_port": port,
         }
         LOGGER.debug("TCP recv\n%s", json.dumps(message_dict, indent=2))
+        tcp_client(manager_host, manager_port, message_dict)
+        LOGGER.debug("message sent to manager")
 
 
 @click.command()

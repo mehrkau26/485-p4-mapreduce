@@ -35,6 +35,11 @@ class Manager:
                     'host': message_dict["worker_host"],
                     'status': 'Ready'
                 }
+                print("worker added:" + self.worker_dict["worker_port"])
+                register_ack = {
+                    "message_type": "register_ack"
+                }
+                print("ack sent to worker")
             if message_dict["message_type"] == "shutdown":
             # Handle shutdown logic
                 for worker_port, worker_info in self.worker_dict.items():
@@ -43,7 +48,7 @@ class Manager:
                     tcp_client(worker_host, worker_port, message_dict)
                 # thread.close()
                 self.signals["shutdown"] = True
-            if message_dict["message_type"] == # a job:
+            # if message_dict["message_type"] == # a job:
                 
 
         thread = threading.Thread(target=tcp_server, args=(host, port, self.signals, manager_message))
