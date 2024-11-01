@@ -31,6 +31,7 @@ class Manager:
         self.port = port
         self.signals = {"shutdown": False}
         self.worker_dict = ThreadSafeOrderedDict()
+    
     def manager_message(self, message_dict):
         if message_dict["message_type"] == "register":
             self.worker_dict[message_dict["worker_port"]] = {
