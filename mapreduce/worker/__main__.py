@@ -21,8 +21,11 @@ LOGGER = logging.getLogger(__name__)
 class Worker:
     """A class representing a Worker node in a MapReduce cluster."""
     def __init__(self, host, port, manager_host, manager_port):
+        self.workers = []
         self.host = host
         self.port = port
+        self.manager_host = manager_host
+        self.manager_port = manager_port
         
         """Construct a Worker instance and start listening for messages."""
         LOGGER.info(
@@ -34,31 +37,39 @@ class Worker:
             manager_host, manager_port,
         )
         self.signals = {"shutdown": False}
-        def worker_message(message_dict):
-            if message_dict["message_type"] == "register_ack":
-                print("ack received from manager")
-                thread = threading.Thread(target=udp_server, args=(self.host, self.port, self.signals, worker_message))
-            if message_dict["message_type"] == "shutdown":
-                
-            # Handle shutdown logic
-                self.signals["shutdown"] = True
-                
-                #thread.close()
+        self.start_worker_thread()
+        self.register_worker()
         
-        thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, worker_message))
-
-        thread.start()
+    def worker_message(self, message_dict):
+        if message_dict["message_type"] == "register_ack":
+            print("ack received from manager")
+                #self.udp_thread = threading.Thread(target=udp_server, args=(self.host, self.port, self.signals, worker_message))
+                #self.udp_thread.start()
+        if message_dict["message_type"] == "shutdown":
+            # Handle shutdown logic
+            self.signals["shutdown"] = True
+                #if hasattr(self, 'tcp_thread'):
+                    #self.tcp_thread.join()
+                #thread.close()
+    def start_worker_thread(self):
+        self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, self.worker_message))
+        self.tcp_thread.start()
         #thread.join()
-
-        # This is a fake message to demonstrate pretty printing with logging
+    
+    def register_worker(self):
         message_dict = {
             "worker_host": self.host,
             "worker_port": self.port,
             "message_type": "register"
         }
-        LOGGER.debug("TCP recv\n%s", json.dumps(message_dict, indent=2))
-        tcp_client(manager_host, manager_port, message_dict)
-        LOGGER.debug("message sent to manager")
+        tcp_client(self.manager_host, self.manager_port, message_dict)
+        print("registration message sent to manager")
+    
+    def wait_for_shutdown(self):
+        while not self.signals["shutdown"]:
+            time.sleep(0.1)
+        self.tcp_thread.join()
+        print("worker tcp thread joined, worker fully shut down")
 
 
 @click.command()
@@ -79,10 +90,11 @@ def main(host, port, manager_host, manager_port, logfile, loglevel):
     root_logger = logging.getLogger()
     root_logger.addHandler(handler)
     root_logger.setLevel(loglevel.upper())
-    Worker(host, port, manager_host, manager_port)
+    worker = Worker(host, port, manager_host, manager_port)
 
 
     print("main() starting")
+    worker.wait_for_shutdown()
     
 
 

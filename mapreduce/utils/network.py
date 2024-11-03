@@ -38,6 +38,7 @@ def tcp_server(host, port, signals, handle_func):
 
             message_bytes = b''.join(message_chunks)
             message_str = message_bytes.decode("utf-8")
+            print(f"message receieved: " + message_str)
 
             try:
                 message_dict = json.loads(message_str)
@@ -52,6 +53,7 @@ def tcp_client(host, port, message_dict):
         print(f"Connecting to server at {host}:{port}")
         # connect to the server
         sock.connect((host, port))
+        print(f"message being sent: " + message)
 
         sock.sendall(message.encode('utf-8'))
 

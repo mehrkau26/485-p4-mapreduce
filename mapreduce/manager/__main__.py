@@ -30,33 +30,46 @@ class Manager:
         self.host = host
         self.port = port
         self.signals = {"shutdown": False}
+        self.lock = threading.Lock()
         self.worker_dict = ThreadSafeOrderedDict()
+        
+        self.start_tcp_server()
     
     def manager_message(self, message_dict):
         if message_dict["message_type"] == "register":
-            self.worker_dict[message_dict["worker_port"]] = {
-                'host': message_dict["worker_host"],
-                'status': 'Ready'
-            }
+            with self.lock:
+                self.worker_dict[message_dict["worker_port"]] = {
+                    'host': message_dict["worker_host"],
+                    'status': 'Ready'
+                }
             # print("worker added:" + self.worker_dict["worker_port"])
-            register_ack = {
-                "message_type": "register_ack"
-            }
-            tcp_client(message_dict["worker_host"], message_dict["worker_port"], register_ack)
-            print("ack sent to worker")
-        if message_dict["message_type"] == "shutdown":
+                register_ack = {
+                    "message_type": "register_ack"
+                }
+                tcp_client(message_dict["worker_host"], message_dict["worker_port"], register_ack)
+                print("ack sent to worker")
+        elif message_dict["message_type"] == "shutdown":
         # Handle shutdown logic
+            self.signals["shutdown"] = True
             for worker_port, worker_info in self.worker_dict.items():
                 worker_host = worker_info["host"]
-                worker_status = worker_info["status"]
                 tcp_client(worker_host, worker_port, message_dict)
-            # thread.close()
-            self.signals["shutdown"] = True
+            print("manager shutting down")
+            #thread.close()
+            
+
         # if message_dict["message_type"] == # a job:
                 
     def start_tcp_server(self):
-        thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, self.manager_message))
-        thread.start()
+        self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, self.manager_message))
+        self.tcp_thread.start()
+    
+    def wait_for_shutdown(self):
+        while not self.signals["shutdown"]:
+            time.sleep(0.1)
+        self.tcp_thread.join()
+        print("tcp thread joined, manager fully shut down")
+
         
 @click.command()
 @click.option("--host", "host", default="localhost")
@@ -79,10 +92,9 @@ def main(host, port, logfile, loglevel, shared_dir):
     root_logger.addHandler(handler)
     root_logger.setLevel(loglevel.upper())
     manager = Manager(host, port)
-    manager.start_tcp_server()
 
     print("main() starting")
-    
+    manager.wait_for_shutdown()
 
     
     
