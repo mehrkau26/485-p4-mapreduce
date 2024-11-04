@@ -44,7 +44,7 @@ class Worker:
                 self.handle_message(job)
             time.sleep(0.1)
         self.tcp_thread.join()
-        print("worker tcp thread joined, worker fully shut down")
+        print("job tcp thread joined, job fully shut down")
 
     def start_listening_tcp(self):
          self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, self.handle_message))
@@ -64,7 +64,7 @@ class Worker:
         if message_dict["message_type"] == "shutdown":
             print("shutdown message received")
             self.signals["shutdown"] = True
-            self.tcp_thread.join()
+            # self.tcp_thread.join()
             print("worker shutting down")
 
 
