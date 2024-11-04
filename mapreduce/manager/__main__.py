@@ -18,7 +18,6 @@ from mapreduce.utils.job import Job
 LOGGER = logging.getLogger(__name__)
 
 job_id_counter = 0
-is_job_running = False
 
 class Manager:
     """Represent a MapReduce framework Manager node."""
@@ -35,9 +34,11 @@ class Manager:
         self.signals = {"shutdown": False}
         self.lock = threading.Lock()
         self.worker_dict = ThreadSafeOrderedDict()
+        self.is_job_running = False
         self.job_queue = deque()
         
         self.start_tcp_server()
+        self.start_job_processor()
     
     def get_new_job_id(self):
         global job_id_counter
@@ -84,15 +85,16 @@ class Manager:
         self.tcp_thread.start()
     
     def start_job_processor(self):
-        self.job_processor_thread = threading.Thread(target=self.process_job_queue)
+        self.job_processor_thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, self.run_job))
+        self.job_processor_thread.start()
 
     def run_job(self):
         print("entering new_manager_job")
-        while not self.signals["shutdown"] & is_job_running:
-                time.sleep(0.1)
-                with self.lock:
-                    is_job_running = True
-                    job = Job(self.job_queue)
+        while self.is_job_running:
+            time.sleep(0.1)
+        with self.lock:
+            self.is_job_running = True
+            job = Job(self.job_queue)
     
     def wait_for_shutdown(self):
         while not self.signals["shutdown"]:
@@ -124,8 +126,9 @@ def main(host, port, logfile, loglevel, shared_dir):
     manager = Manager(host, port)
 
     print("main() starting")
-    manager.wait_for_shutdown()
     manager.run_job()
+    manager.wait_for_shutdown()
+    
 
 if __name__ == "__main__":
     main()
