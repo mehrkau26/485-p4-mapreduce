@@ -1,17 +1,15 @@
+
 """MapReduce framework Worker node."""
-from http import server
 import os
-import tempfile
 import logging
 import json
-import threading
 import time
 import click
-from mapreduce.utils.network import tcp_client
+import threading
 from mapreduce.utils.network import tcp_server
+from mapreduce.utils.network import tcp_client
 from mapreduce.utils.network import udp_server
-from mapreduce.utils.network import udp_client
-import mapreduce.utils
+from collections import deque 
 
 
 # Configure logging
@@ -21,55 +19,43 @@ LOGGER = logging.getLogger(__name__)
 class Worker:
     """A class representing a Worker node in a MapReduce cluster."""
     def __init__(self, host, port, manager_host, manager_port):
-        self.workers = []
-        self.host = host
-        self.port = port
-        self.manager_host = manager_host
-        self.manager_port = manager_port
-        
         """Construct a Worker instance and start listening for messages."""
         LOGGER.info(
             "Starting worker host=%s port=%s pwd=%s",
-            self.host, self.port, os.getcwd(),
+            host, port, os.getcwd(),
         )
         LOGGER.info(
             "manager_host=%s manager_port=%s",
             manager_host, manager_port,
         )
+        self.host = host
+        self.port = port
+        self.manager_host = manager_host
+        self.manager_port = manager_port 
         self.signals = {"shutdown": False}
-        self.start_worker_thread()
-        self.register_worker()
-        
-    def worker_message(self, message_dict):
-        if message_dict["message_type"] == "register_ack":
-            print("ack received from manager")
-                #self.udp_thread = threading.Thread(target=udp_server, args=(self.host, self.port, self.signals, worker_message))
-                #self.udp_thread.start()
-        if message_dict["message_type"] == "shutdown":
-            # Handle shutdown logic
-            self.signals["shutdown"] = True
-                #if hasattr(self, 'tcp_thread'):
-                    #self.tcp_thread.join()
-                #thread.close()
-    def start_worker_thread(self):
-        self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, self.worker_message))
-        self.tcp_thread.start()
-        #thread.join()
+        self.job_queue = deque()
     
-    def register_worker(self):
-        message_dict = {
+    def start_listening_tcp(self):
+        self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, self.job_queue))
+        self.tcp_thread.start()
+    def register(self):
+         message_dict = {
             "worker_host": self.host,
             "worker_port": self.port,
             "message_type": "register"
         }
-        tcp_client(self.manager_host, self.manager_port, message_dict)
-        print("registration message sent to manager")
+         tcp_client(self.manager_host, self.manager_port, message_dict)
+         print("registration message sent to manager")
     
-    def wait_for_shutdown(self):
-        while not self.signals["shutdown"]:
-            time.sleep(0.1)
-        self.tcp_thread.join()
-        print("worker tcp thread joined, worker fully shut down")
+    def handle_message(self, message_dict):
+        if message_dict["message_type"] == "register_ack":
+            print("ack recieved from manager")
+        if message_dict["message_type"] == "shutdown":
+            print("shutdown message received")
+            self.signals["shutdown"] = True
+            self.tcp_thread.join()
+            print("worker shutting down")
+
 
 
 @click.command()
@@ -92,13 +78,16 @@ def main(host, port, manager_host, manager_port, logfile, loglevel):
     root_logger.setLevel(loglevel.upper())
     worker = Worker(host, port, manager_host, manager_port)
 
-
-    print("main() starting")
-    worker.wait_for_shutdown()
+    worker.start_listening_tcp()
+    worker.register()
     
-
-
-
+    while not worker.signals["shutdown"]:
+        if worker.job_queue:
+            job=worker.job_queue.popleft()
+            worker.handle_message(job)
+        time.sleep(0.1)
+    worker.tcp_thread.join()
+    print("worker tcp thread joined, worker fully shut down")
 
 
 if __name__ == "__main__":
