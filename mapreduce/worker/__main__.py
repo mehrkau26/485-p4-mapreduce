@@ -47,7 +47,7 @@ class Worker:
         print("worker tcp thread joined, worker fully shut down")
 
     def start_listening_tcp(self):
-         self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, self.job_queue))
+         self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, self.handle_message))
          self.tcp_thread.start()
     def register(self):
         message_dict = {
