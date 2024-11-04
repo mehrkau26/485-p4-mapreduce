@@ -34,10 +34,20 @@ class Manager:
         self.lock = threading.Lock()
         self.signals = {"shutdown": False}
         self.worker_dict = ThreadSafeOrderedDict()
+        self.start_listening_tcp()
+        self.start_listening_udp()
+        while not self.signals["shutdown"]:
+            if self.job_queue:
+                job=self.job_queue.popleft()
+                self.handlemessage(job)
+            time.sleep(0.1)
+        self.tcp_thread.join()
+        print("manager tcp thread joined, manager fully shut down")
 
     def start_listening_tcp(self):
         self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port,self.signals, self.job_queue))
         self.tcp_thread.start()
+
     def start_listening_udp(self):
         self.udp_thread = threading.Thread(target=udp_server, args=(self.host, self.port, self.signals, self.heartbeat_checker))
     def heartbeat_checker(self):
@@ -85,23 +95,6 @@ def main(host, port, logfile, loglevel, shared_dir):
     root_logger.addHandler(handler)
     root_logger.setLevel(loglevel.upper())
     manager = Manager(host, port)
-    
-    manager.start_listening_tcp()
-    manager.start_listening_udp()
-    
-
-    while not manager.signals["shutdown"]:
-        if manager.job_queue:
-            job=manager.job_queue.popleft()
-            manager.handlemessage(job)
-        time.sleep(0.1)
-    manager.tcp_thread.join()
-    print("manager tcp thread joined, manager fully shut down")
-
-
-
-    
-
 
 
 if __name__ == "__main__":

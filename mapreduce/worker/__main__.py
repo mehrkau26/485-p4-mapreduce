@@ -34,18 +34,30 @@ class Worker:
         self.manager_port = manager_port 
         self.signals = {"shutdown": False}
         self.job_queue = deque()
-    
-    def start_listening_tcp(self):
         self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, self.job_queue))
         self.tcp_thread.start()
+        self.register()
+
+        while not self.signals["shutdown"]:
+            if self.job_queue:
+                job=self.job_queue.popleft()
+                self.handle_message(job)
+            time.sleep(0.1)
+        self.tcp_thread.join()
+        
+    print("worker tcp thread joined, worker fully shut down")
+    
+    # def start_listening_tcp(self):
+    #     self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, self.job_queue))
+    #     self.tcp_thread.start()
     def register(self):
-         message_dict = {
+        message_dict = {
             "worker_host": self.host,
             "worker_port": self.port,
             "message_type": "register"
         }
-         tcp_client(self.manager_host, self.manager_port, message_dict)
-         print("registration message sent to manager")
+        tcp_client(self.manager_host, self.manager_port, message_dict)
+        print("registration message sent to manager")
     
     def handle_message(self, message_dict):
         if message_dict["message_type"] == "register_ack":
@@ -78,16 +90,8 @@ def main(host, port, manager_host, manager_port, logfile, loglevel):
     root_logger.setLevel(loglevel.upper())
     worker = Worker(host, port, manager_host, manager_port)
 
-    worker.start_listening_tcp()
-    worker.register()
-    
-    while not worker.signals["shutdown"]:
-        if worker.job_queue:
-            job=worker.job_queue.popleft()
-            worker.handle_message(job)
-        time.sleep(0.1)
-    worker.tcp_thread.join()
-    print("worker tcp thread joined, worker fully shut down")
+    # worker.start_listening_tcp()
+    # worker.register()
 
 
 if __name__ == "__main__":
