@@ -10,14 +10,15 @@ import click
 from collections import deque
 from mapreduce.utils.network import tcp_client
 from mapreduce.utils.network import tcp_server
-from mapreduce.worker.__main__ import Worker
 from mapreduce.utils import ThreadSafeOrderedDict
+from mapreduce.utils.job import Job
 
 
 # Configure logging
 LOGGER = logging.getLogger(__name__)
 
 job_id_counter = 0
+is_job_running = False
 
 class Manager:
     """Represent a MapReduce framework Manager node."""
@@ -77,9 +78,21 @@ class Manager:
                     print("job", item)
  
 
+    
     def start_tcp_server(self):
         self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, self.manager_message))
         self.tcp_thread.start()
+    
+    def start_job_processor(self):
+        self.job_processor_thread = threading.Thread(target=self.process_job_queue)
+
+    def run_job(self):
+        print("entering new_manager_job")
+        while not self.signals["shutdown"] & is_job_running:
+                time.sleep(0.1)
+                with self.lock:
+                    is_job_running = True
+                    job = Job(self.job_queue)
     
     def wait_for_shutdown(self):
         while not self.signals["shutdown"]:
@@ -112,13 +125,7 @@ def main(host, port, logfile, loglevel, shared_dir):
 
     print("main() starting")
     manager.wait_for_shutdown()
-
-    
-    
-
-   
-
-
+    manager.run_job()
 
 if __name__ == "__main__":
     main()
