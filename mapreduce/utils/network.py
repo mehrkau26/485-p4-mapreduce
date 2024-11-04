@@ -38,7 +38,6 @@ def tcp_server(host, port, signals, handle_func):
 
             message_bytes = b''.join(message_chunks)
             message_str = message_bytes.decode("utf-8")
-            print(f"message receieved: " + message_str)
 
             try:
                 message_dict = json.loads(message_str)

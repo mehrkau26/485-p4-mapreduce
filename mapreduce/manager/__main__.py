@@ -7,6 +7,7 @@ import json
 import threading
 import time
 import click
+from collections import deque
 from mapreduce.utils.network import tcp_client
 from mapreduce.utils.network import tcp_server
 from mapreduce.worker.__main__ import Worker
@@ -16,6 +17,7 @@ from mapreduce.utils import ThreadSafeOrderedDict
 # Configure logging
 LOGGER = logging.getLogger(__name__)
 
+job_id_counter = 0
 
 class Manager:
     """Represent a MapReduce framework Manager node."""
@@ -32,8 +34,15 @@ class Manager:
         self.signals = {"shutdown": False}
         self.lock = threading.Lock()
         self.worker_dict = ThreadSafeOrderedDict()
+        self.job_queue = deque()
         
         self.start_tcp_server()
+    
+    def get_new_job_id(self):
+        global job_id_counter
+        self.job_id = job_id_counter
+        job_id_counter += 1
+        return self.job_id
     
     def manager_message(self, message_dict):
         if message_dict["message_type"] == "register":
@@ -50,16 +59,24 @@ class Manager:
                 print("ack sent to worker")
         elif message_dict["message_type"] == "shutdown":
         # Handle shutdown logic
-            self.signals["shutdown"] = True
-            for worker_port, worker_info in self.worker_dict.items():
-                worker_host = worker_info["host"]
-                tcp_client(worker_host, worker_port, message_dict)
-            print("manager shutting down")
+            with self.lock:
+                self.signals["shutdown"] = True
+                for worker_port, worker_info in self.worker_dict.items():
+                    worker_host = worker_info["host"]
+                    tcp_client(worker_host, worker_port, message_dict)
+                print("manager shutting down")
             #thread.close()
-            
 
-        # if message_dict["message_type"] == # a job:
-                
+        # getting the job from client to manager
+        elif message_dict["message_type"] == "new_manager_job":
+            with self.lock:
+                job_id = self.get_new_job_id()
+                message_dict["job_id"] = job_id
+                self.job_queue.append(message_dict)
+                for item in self.job_queue:
+                    print("job", item)
+ 
+
     def start_tcp_server(self):
         self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, self.manager_message))
         self.tcp_thread.start()
