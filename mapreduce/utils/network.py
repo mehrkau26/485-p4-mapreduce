@@ -43,12 +43,13 @@ def tcp_server(host, port, signals, handle_func):
                 message_dict = json.loads(message_str)
             except json.JSONDecodeError:
                 continue
-            if message_dict["message_type"] == "shutdown":
-                handle_func.appendleft(message_dict)
-            else:
-                handle_func.append(message_dict)
-            #for message in handle_func:
+            # if message_dict["message_type"] == "shutdown":
+            #     handle_func.appendleft(message_dict)
+            # else:
+            #     handle_func.append(message_dict)
+            # #for message in handle_func:
                 #print(message)
+            handle_func(message_dict)
         print("thread has been terminated")
 
 def tcp_client(host, port, message_dict):
@@ -57,7 +58,7 @@ def tcp_client(host, port, message_dict):
         print(f"Connecting to server at {host}:{port}")
         # connect to the server
         sock.connect((host, port))
-        print(f"message being sent: " + message)
+        print(f"message being sent: ", message)
 
         sock.sendall(message.encode('utf-8'))
 

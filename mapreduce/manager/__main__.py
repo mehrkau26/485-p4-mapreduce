@@ -45,7 +45,7 @@ class Manager:
         print("manager tcp thread joined, manager fully shut down")
 
     def start_listening_tcp(self):
-        self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port,self.signals, self.job_queue))
+        self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port,self.signals, self.handlemessage))
         self.tcp_thread.start()
 
     def start_listening_udp(self):
@@ -67,10 +67,11 @@ class Manager:
                 print("ack sent to worker")
         if message_dict["message_type"] == "shutdown":
             self.signals["shutdown"] = True
+            LOGGER.info("hello")
             for worker_port, worker_info in self.worker_dict.items():
                 worker_host = worker_info["host"]
                 tcp_client(worker_host, worker_port, message_dict)
-            self.tcp_thread.join()
+            # self.tcp_thread.join()
             print("manager shutting down")
  
 
@@ -94,7 +95,7 @@ def main(host, port, logfile, loglevel, shared_dir):
     root_logger = logging.getLogger()
     root_logger.addHandler(handler)
     root_logger.setLevel(loglevel.upper())
-    manager = Manager(host, port)
+    Manager(host, port)
 
 
 if __name__ == "__main__":

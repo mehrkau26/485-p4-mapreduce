@@ -34,9 +34,9 @@ class Worker:
         self.manager_port = manager_port 
         self.signals = {"shutdown": False}
         self.job_queue = deque()
-        self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, self.job_queue))
-        self.tcp_thread.start()
         self.register()
+        self.start_listening_tcp()
+
 
         while not self.signals["shutdown"]:
             if self.job_queue:
@@ -44,12 +44,11 @@ class Worker:
                 self.handle_message(job)
             time.sleep(0.1)
         self.tcp_thread.join()
-        
-    print("worker tcp thread joined, worker fully shut down")
-    
-    # def start_listening_tcp(self):
-    #     self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, self.job_queue))
-    #     self.tcp_thread.start()
+        print("worker tcp thread joined, worker fully shut down")
+
+    def start_listening_tcp(self):
+         self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, self.job_queue))
+         self.tcp_thread.start()
     def register(self):
         message_dict = {
             "worker_host": self.host,
@@ -67,7 +66,6 @@ class Worker:
             self.signals["shutdown"] = True
             self.tcp_thread.join()
             print("worker shutting down")
-
 
 
 @click.command()
@@ -88,10 +86,7 @@ def main(host, port, manager_host, manager_port, logfile, loglevel):
     root_logger = logging.getLogger()
     root_logger.addHandler(handler)
     root_logger.setLevel(loglevel.upper())
-    worker = Worker(host, port, manager_host, manager_port)
-
-    # worker.start_listening_tcp()
-    # worker.register()
+    Worker(host, port, manager_host, manager_port)
 
 
 if __name__ == "__main__":
