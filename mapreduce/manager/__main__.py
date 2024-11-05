@@ -2,11 +2,10 @@
 import os
 import tempfile
 import logging
-import json
 import time
 import click
 import threading
-import mapreduce.utils
+from mapreduce.manager.job import Job
 from mapreduce.utils.network import tcp_server
 from mapreduce.utils.network import tcp_client
 from mapreduce.utils.network import udp_server
@@ -28,18 +27,21 @@ class Manager:
             "Starting manager host=%s port=%s pwd=%s",
             host, port, os.getcwd(),
         )
+
         self.host = host
         self.port = port 
         self.job_queue = deque()
+        self.job_id = 0
         self.lock = threading.Lock()
         self.signals = {"shutdown": False}
         self.worker_dict = ThreadSafeOrderedDict()
         self.start_listening_tcp()
         self.start_listening_udp()
+
         while not self.signals["shutdown"]:
             if self.job_queue:
                 job=self.job_queue.popleft()
-                self.handlemessage(job)
+                self.make_tasks(job)
             time.sleep(0.1)
         self.tcp_thread.join()
         print("manager tcp thread joined, manager fully shut down")
@@ -73,7 +75,35 @@ class Manager:
                 tcp_client(worker_host, worker_port, message_dict)
             # self.tcp_thread.join()
             print("manager shutting down")
- 
+        if message_dict["message_type"] == "new_manager_job":
+            message_dict["job_id"] = self.job_id
+            self.job_queue.append(message_dict)
+            self.job_id += 1
+    
+    def make_tasks(self, job):
+        print("madejob")
+        #delete output dir if it exists
+        #create output dir
+
+        # create temp_dir (mapreduce-shared-jobid(in 5 digits)-d56wiir)
+        prefix = f"mapreduce-shared-job{job["job_id"]:05d}-"
+        print("TESTING message_dict:", job)
+        with tempfile.TemporaryDirectory(prefix=prefix) as tmpdir:
+            LOGGER.info("Created tmpdir %s", tmpdir)
+        while not self.signals["shutdown"]: #change? until job is completed?
+            time.sleep(0.1)
+        LOGGER.info("Cleaned up tmpdir %s", tmpdir)
+
+        #partition input dir into num_mappers using round robin and assign each partition a taskid
+        num_mappers = job["num_mappers"]
+        input_files = job["input_dir"]
+            
+
+
+
+        #create message_dict for each task_id and add to task_queue
+
+
 
 @click.command()
 @click.option("--host", "host", default="localhost")

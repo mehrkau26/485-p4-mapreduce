@@ -7,3 +7,4 @@ Nilay Muchhala <nilaym@umich.edu>
 
 from mapreduce.manager.__main__ import Manager
 from mapreduce.utils import network
+from mapreduce.manager.job import Job

@@ -67,7 +67,6 @@ class Worker:
             # self.tcp_thread.join()
             print("worker shutting down")
 
-
 @click.command()
 @click.option("--host", "host", default="localhost")
 @click.option("--port", "port", default=6001)
