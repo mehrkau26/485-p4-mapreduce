@@ -83,27 +83,23 @@ class Manager:
             self.job_id += 1
     
     def make_tasks(self, job):
-        print("madejob")
         #delete output dir if it exists
         #create output dir
-        # if job["output_directory"] == '':
         if os.path.exists(job["output_directory"]):
             shutil.rmtree(job["output_directory"])
         os.mkdir(job["output_directory"])
-        LOGGER.info("created output file at", job["output_directory"])
+
+        
         # create temp_dir (mapreduce-shared-jobid(in 5 digits)-d56wiir)
         prefix = f"mapreduce-shared-job{job["job_id"]:05d}-"
-        print("prefix", prefix)
-        with tempfile.TemporaryDirectory(prefix=prefix, dir="/tmp") as tmpdir:
+        with tempfile.TemporaryDirectory(prefix=prefix) as tmpdir:
             LOGGER.info("Created tmpdir %s", tmpdir)
-            while not job.get("finished", False): #change? until job is completed?
-                print("waiting...")
+            while not self.signals["shutdown"]: #change? until job is completed?
                 time.sleep(0.1)
                 # DO MAP STAGE WORK THEN SET FINISHED TO TRUE
-                job["finished"] = True
         LOGGER.info("Cleaned up tmpdir %s", tmpdir)
 
-        #partition input dir into num_mappers using round robin and assign each partition a taskid
+        # partition input dir into num_mappers using round robin and assign each partition a taskid
         # num_mappers = job["num_mappers"]
         # input_files = job["input_directory"]
             
