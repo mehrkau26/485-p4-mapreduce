@@ -92,11 +92,28 @@ class Manager:
             if self.task_queue:
                 job=self.task_queue.popleft()
                 print(len(self.task_queue))
+                assigned = False
                 #worker_dict = self.next_available_worker()
-                if any(worker['status'] == 'Ready' for worker in self.worker_dict.values()):
-                    print("i have a worker!")
+                # while any(worker['status'] == 'Ready' for worker in self.worker_dict.values()):
+                #print("i have a worker!")
+                for worker_port, worker_info in self.worker_dict.items():
+                    print("looking for worker")
+                    if worker_info['status'] == 'Ready':
+                        worker_host = worker_info['host']
+                        success = tcp_client(worker_host, worker_port, job)
+                        if success:
+                            print("worker assigned to task")
+                            worker_info['status'] = 'Busy'
+                            assigned = True
+                            break #do we need this break
+                        else:
+                            worker_info['status'] = 'Dead'
+                            print("worker is dead")
+                            # self.task_queue.appendLeft(job)
+                if assigned==False:
+                    print("reassigning")
+                    self.task_queue.appendleft(job)
                 #wait for worker to become available
-
             time.sleep(0.1)
 
     def make_tasks(self, job):

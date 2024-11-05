@@ -53,14 +53,18 @@ def tcp_server(host, port, signals, handle_func):
         print("thread has been terminated")
 
 def tcp_client(host, port, message_dict):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        message = json.dumps(message_dict)
-        print(f"Connecting to server at {host}:{port}")
-        # connect to the server
-        sock.connect((host, port))
-        print(f"message being sent: ", message)
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            message = json.dumps(message_dict)
+            print(f"Connecting to server at {host}:{port}")
+            # connect to the server
+            sock.connect((host, port))
+            print(f"message being sent: ", message)
 
-        sock.sendall(message.encode('utf-8'))
+            sock.sendall(message.encode('utf-8'))
+    except:
+        return False
+    return True
 
 def udp_server(host, port, signals, handle_func):
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
