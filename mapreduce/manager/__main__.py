@@ -32,6 +32,7 @@ class Manager:
         self.host = host
         self.port = port 
         self.job_queue = deque()
+        self.task_queue = deque()
         self.job_id = 0
         self.lock = threading.Lock()
         self.signals = {"shutdown": False}
@@ -94,19 +95,45 @@ class Manager:
         prefix = f"mapreduce-shared-job{job["job_id"]:05d}-"
         with tempfile.TemporaryDirectory(prefix=prefix) as tmpdir:
             LOGGER.info("Created tmpdir %s", tmpdir)
+            input_files = sorted(os.listdir(job["input_directory"]))
+            print("input files", input_files)
+            partitions = [[] for _ in range(job["num_mappers"])]
+
+            for i, file in enumerate(input_files):
+                print("entering partition logic", i, file)
+                task_id = i % job["num_mappers"]
+                print("task id", task_id)
+                partitions[task_id].append(file)
+
+            #create message_dict for each task_id and add to task_queue
+            for taskid, files in enumerate(partitions):
+                print(f"Task {taskid}: {files}")
+                message_dict = {
+                    "message_type": "new_map_task",
+                    "task_id": taskid,
+                    "input_path": files,
+                    "executable": job["mapper_executable"],
+                    "output_directory": tmpdir,
+                    "num_partitions": job["num_reducers"]
+                }
+                self.task_queue.append(message_dict)
+            for task in self.task_queue:
+                print(task)
             while not self.signals["shutdown"]: #change? until job is completed?
                 time.sleep(0.1)
                 # DO MAP STAGE WORK THEN SET FINISHED TO TRUE
         LOGGER.info("Cleaned up tmpdir %s", tmpdir)
 
         # partition input dir into num_mappers using round robin and assign each partition a taskid
-        # num_mappers = job["num_mappers"]
-        # input_files = job["input_directory"]
+        
+
+
+    
             
 
 
 
-        #create message_dict for each task_id and add to task_queue
+   
 
 
 
