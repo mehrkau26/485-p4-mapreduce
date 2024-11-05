@@ -1,5 +1,6 @@
 """MapReduce framework Manager node."""
 import os
+import shutil
 import tempfile
 import logging
 import time
@@ -76,6 +77,7 @@ class Manager:
             # self.tcp_thread.join()
             print("manager shutting down")
         if message_dict["message_type"] == "new_manager_job":
+            message_dict["finished"] = False
             message_dict["job_id"] = self.job_id
             self.job_queue.append(message_dict)
             self.job_id += 1
@@ -84,19 +86,26 @@ class Manager:
         print("madejob")
         #delete output dir if it exists
         #create output dir
-
+        # if job["output_directory"] == '':
+        if os.path.exists(job["output_directory"]):
+            shutil.rmtree(job["output_directory"])
+        os.mkdir(job["output_directory"])
         # create temp_dir (mapreduce-shared-jobid(in 5 digits)-d56wiir)
         prefix = f"mapreduce-shared-job{job["job_id"]:05d}-"
-        print("TESTING message_dict:", job)
+        print("prefix", prefix)
         with tempfile.TemporaryDirectory(prefix=prefix) as tmpdir:
             LOGGER.info("Created tmpdir %s", tmpdir)
-        while not self.signals["shutdown"]: #change? until job is completed?
-            time.sleep(0.1)
+            while not job.get("finished", False): #change? until job is completed?
+                print("waiting...")
+                time.sleep(0.1)
+                # DO MAP STAGE WORK THEN SET FINISHED TO TRUE
+                job["finished"] = True
+        print("Cleaned up tmpdir %s", tmpdir)
         LOGGER.info("Cleaned up tmpdir %s", tmpdir)
 
         #partition input dir into num_mappers using round robin and assign each partition a taskid
-        num_mappers = job["num_mappers"]
-        input_files = job["input_dir"]
+        # num_mappers = job["num_mappers"]
+        # input_files = job["input_directory"]
             
 
 
