@@ -44,6 +44,7 @@ class Manager:
             if self.job_queue:
                 job=self.job_queue.popleft()
                 self.make_tasks(job)
+                print("check")
             time.sleep(0.1)
         self.tcp_thread.join()
         print("manager tcp thread joined, manager fully shut down")
@@ -73,7 +74,7 @@ class Manager:
             self.signals["shutdown"] = True
             LOGGER.info("hello")
             for worker_port, worker_info in self.worker_dict.items():
-                worker_host = worker_info["host"]
+                worker_host = worker_info["host"] 
                 tcp_client(worker_host, worker_port, message_dict)
             # self.tcp_thread.join()
             print("manager shutting down")
@@ -82,7 +83,22 @@ class Manager:
             message_dict["job_id"] = self.job_id
             self.job_queue.append(message_dict)
             self.job_id += 1
+    # def next_available_worker(self):
+    #     print("found worker")
+    #     return self.worker_dict[6001]
     
+    def assign_tasks(self):
+        while not self.signals["shutdown"]:
+            if self.task_queue:
+                job=self.task_queue.popleft()
+                print(len(self.task_queue))
+                #worker_dict = self.next_available_worker()
+                if any(worker['status'] == 'Ready' for worker in self.worker_dict.values()):
+                    print("i have a worker!")
+                #wait for worker to become available
+
+            time.sleep(0.1)
+
     def make_tasks(self, job):
         #delete output dir if it exists
         #create output dir
@@ -117,8 +133,7 @@ class Manager:
                     "num_partitions": job["num_reducers"]
                 }
                 self.task_queue.append(message_dict)
-            for task in self.task_queue:
-                print(task)
+            self.assign_tasks()
             while not self.signals["shutdown"]: #change? until job is completed?
                 time.sleep(0.1)
                 # DO MAP STAGE WORK THEN SET FINISHED TO TRUE
