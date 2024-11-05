@@ -90,17 +90,17 @@ class Manager:
         if os.path.exists(job["output_directory"]):
             shutil.rmtree(job["output_directory"])
         os.mkdir(job["output_directory"])
+        LOGGER.info("created output file at", job["output_directory"])
         # create temp_dir (mapreduce-shared-jobid(in 5 digits)-d56wiir)
         prefix = f"mapreduce-shared-job{job["job_id"]:05d}-"
         print("prefix", prefix)
-        with tempfile.TemporaryDirectory(prefix=prefix) as tmpdir:
+        with tempfile.TemporaryDirectory(prefix=prefix, dir="/tmp") as tmpdir:
             LOGGER.info("Created tmpdir %s", tmpdir)
             while not job.get("finished", False): #change? until job is completed?
                 print("waiting...")
                 time.sleep(0.1)
                 # DO MAP STAGE WORK THEN SET FINISHED TO TRUE
                 job["finished"] = True
-        print("Cleaned up tmpdir %s", tmpdir)
         LOGGER.info("Cleaned up tmpdir %s", tmpdir)
 
         #partition input dir into num_mappers using round robin and assign each partition a taskid
