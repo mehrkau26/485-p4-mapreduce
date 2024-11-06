@@ -77,20 +77,24 @@ class Worker:
     def handle_map_task(self, message_dict):
         task_id = message_dict["task_id"]
         input_paths = message_dict["input_paths"]
-        executable = message_dict["excutable"]
+        executable = message_dict["executable"]
         num_partitions = message_dict["num_partitions"]
         output_directory = message_dict["output_directory"]
 
         #the temp directory for new_map_task
-        prefix = "mapreduce-local-task{task_id:05d}-"
+        prefix = f"mapreduce-local-task{task_id:05d}-"
+        print("prefix:", prefix)
         with tempfile.TemporaryDirectory(prefix=prefix) as tmpdir:
-            tmp_output_files = [open(tmpdir / f"part-{i:05d}.txt" for i in range(num_partitions))]
-            #for each input file run mapper executable
+            tmp_output_files = [open(os.path.join(tmpdir, f"part-{i:05d}.txt"), "w") for i in range(num_partitions)]
+            
+            #way to keep track of reducer files
             partitions = [[] for _ in range(num_partitions)]
-            for i, file in tmp_output_files:
-                print("partition_")
+            for i, file in enumerate(tmp_output_files):
+                print(f"partition, {i}, file {file}")
                 partitions[i] = file
+            
             for input_path in input_paths:
+                print("first file", input_path)
                 with open(input_path) as infile:
                     with subprocess.Popen(
                         [executable],
@@ -99,15 +103,17 @@ class Worker:
                         text=True,
                     ) as map_process:
                         for line in map_process.stdout:
+                            print("line", line)
                             #partioning manager output files
                             key = line.split('\t')
-                            hexdigest = hashlib.md5(key.encode("utf-8")).hexdigest()
+                            hexdigest = hashlib.md5(key[0].encode("utf-8")).hexdigest()
                             keyhash = int(hexdigest, base=16)
                             partition_number = keyhash % num_partitions
+                            print(f"partition num {partition_number} for line {line}")
     
                             #adds line to correct partition output file
-                            with open(partitions[partition_number]) as outfile:
-                                outfile.write(line)
+                            partitions[partition_number].write(line)
+                            print(f"writing to: {partitions[partition_number]}: {line}")
 
                     #partitioned data is written to output files in temp directory
                     #for i, partition in enumerate(partitioning):
@@ -126,8 +132,8 @@ class Worker:
             #     output_dest = f"{output_directory}/maptask{task_id:05d}-part{i:05d}"
             #     os.rename(source_file, output_dest)
             
-            # while True:
-            #     time.sleep(0.1)
+            while not self.signals["shutdown"]:
+                time.sleep(0.1)
     
     
 @click.command()
