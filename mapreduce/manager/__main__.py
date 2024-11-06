@@ -159,19 +159,8 @@ class Manager:
                 time.sleep(0.1)
                 # DO MAP STAGE WORK THEN SET FINISHED TO TRUE
         LOGGER.info("Cleaned up tmpdir %s", tmpdir)
-
-        # partition input dir into num_mappers using round robin and assign each partition a taskid
         
-
-
-    
-            
-
-
-
-   
-
-
+        # partition input dir into num_mappers using round robin and assign each partition a taskid
 
 @click.command()
 @click.option("--host", "host", default="localhost")
