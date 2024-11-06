@@ -83,6 +83,9 @@ class Manager:
             message_dict["job_id"] = self.job_id
             self.job_queue.append(message_dict)
             self.job_id += 1
+        if message_dict["message_type"] == "finished":
+            worker_port = message_dict['worker_port']
+            self.worker_dict[worker_port]['status'] = "Ready"
     # def next_available_worker(self):
     #     print("found worker")
     #     return self.worker_dict[6001]
@@ -105,7 +108,7 @@ class Manager:
                             print("worker assigned to task")
                             worker_info['status'] = 'Busy'
                             assigned = True
-                            break #do we need this break
+                            break #why do we need this break
                         else:
                             worker_info['status'] = 'Dead'
                             print("worker is dead")
@@ -136,7 +139,8 @@ class Manager:
                 print("entering partition logic", i, file)
                 task_id = i % job["num_mappers"]
                 print("task id", task_id)
-                partitions[task_id].append(file)
+                full_path = os.path.join(job["input_directory"], file)
+                partitions[task_id].append(full_path)
 
             #create message_dict for each task_id and add to task_queue
             for taskid, files in enumerate(partitions):
@@ -144,7 +148,7 @@ class Manager:
                 message_dict = {
                     "message_type": "new_map_task",
                     "task_id": taskid,
-                    "input_path": files,
+                    "input_paths": files,
                     "executable": job["mapper_executable"],
                     "output_directory": tmpdir,
                     "num_partitions": job["num_reducers"]
