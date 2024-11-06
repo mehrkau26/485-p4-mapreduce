@@ -70,6 +70,7 @@ class Manager:
                 }
                 tcp_client(message_dict["worker_host"], message_dict["worker_port"], register_ack)
                 print("ack sent to worker")
+
         if message_dict["message_type"] == "shutdown":
             self.signals["shutdown"] = True
             LOGGER.info("hello")
@@ -78,18 +79,20 @@ class Manager:
                 tcp_client(worker_host, worker_port, message_dict)
             # self.tcp_thread.join()
             print("manager shutting down")
+
         if message_dict["message_type"] == "new_manager_job":
             message_dict["finished"] = False
             message_dict["job_id"] = self.job_id
             self.job_queue.append(message_dict)
             self.job_id += 1
+
         if message_dict["message_type"] == "finished":
             worker_port = message_dict['worker_port']
             self.worker_dict[worker_port]['status'] = "Ready"
     # def next_available_worker(self):
     #     print("found worker")
     #     return self.worker_dict[6001]
-    
+
     def assign_tasks(self):
         while not self.signals["shutdown"]:
             if self.task_queue:
@@ -126,7 +129,6 @@ class Manager:
             shutil.rmtree(job["output_directory"])
         os.mkdir(job["output_directory"])
 
-        
         # create temp_dir (mapreduce-shared-jobid(in 5 digits)-d56wiir)
         prefix = f"mapreduce-shared-job{job["job_id"]:05d}-"
         with tempfile.TemporaryDirectory(prefix=prefix) as tmpdir:
@@ -159,7 +161,7 @@ class Manager:
                 time.sleep(0.1)
                 # DO MAP STAGE WORK THEN SET FINISHED TO TRUE
         LOGGER.info("Cleaned up tmpdir %s", tmpdir)
-        
+
         # partition input dir into num_mappers using round robin and assign each partition a taskid
 
 @click.command()

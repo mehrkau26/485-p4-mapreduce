@@ -1,4 +1,4 @@
-
+"""Thread maintenance."""
 import socket
 import json
 import threading
@@ -16,7 +16,7 @@ def tcp_server(host, port, signals, handle_func):
         print(f"Server listening on {host}:{port}")
 
         sock.settimeout(1)
-        
+
         while not signals["shutdown"]:
             try:
                 clientsocket, address = sock.accept()
