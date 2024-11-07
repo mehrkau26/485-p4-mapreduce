@@ -112,7 +112,6 @@ class Manager:
                             print("worker assigned to task")
                             worker_info['status'] = 'Busy'
                             assigned = True
-                            #break #why do we need this break
                         else:
                             worker_info['status'] = 'Dead'
                             print("worker is dead")

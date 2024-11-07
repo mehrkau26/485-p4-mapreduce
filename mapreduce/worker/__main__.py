@@ -85,8 +85,8 @@ class Worker:
         prefix = f"mapreduce-local-task{task_id:05d}-"
         print("prefix:", prefix)
         with tempfile.TemporaryDirectory(prefix=prefix) as tmpdir:
-            tmp_output_files = [open(os.path.join(tmpdir, f"part-{i:05d}.txt"), "w") for i in range(num_partitions)]
-            
+            tmp_output_files = [open(os.path.join(tmpdir, f"maptask{task_id:05d}-part{i:05d}.txt"), "w") for i in range(num_partitions)]
+            LOGGER.info("Created tmpdir %s", tmp_output_files)
             #way to keep track of reducer files
             partitions = [[] for _ in range(num_partitions)]
             for i, file in enumerate(tmp_output_files):
@@ -112,20 +112,20 @@ class Worker:
                             print(f"partition num {partition_number} for line {line}")
     
                             #adds line to correct partition output file
-                            partitions[partition_number].write(line)
-                            print(f"writing to: {partitions[partition_number]}: {line}")
+                            tmp_output_files[partition_number].write(line)
+                            print(f"writing to: {tmp_output_files[partition_number]}: {line}")
 
                     #partitioned data is written to output files in temp directory
 
             # move to output directory
             for _, file in enumerate(partitions):
                 file.close()
-                print(f"moving {file.name} to {output_directory}")
                 #if os.path.exists(file.name):
                     #print("path exists, removing")
                     #os.remove(file.name)
-                dest_path = os.path.join(output_directory, os.path.basename(file.name))
-                shutil.move(file.name, dest_path)
+                dest_path = os.path.join(output_directory, os.path.basename(str(file)))
+                print(f"moving {str(file)} to {dest_path}")
+                shutil.move(str(file), dest_path)
 
             finished_message = {
                 "message_type": "finished", 
