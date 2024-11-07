@@ -81,11 +81,12 @@ class Worker:
         num_partitions = message_dict["num_partitions"]
         output_directory = message_dict["output_directory"]
 
+
         #the temp directory for new_map_task
         prefix = f"mapreduce-local-task{task_id:05d}-"
         print("prefix:", prefix)
         with tempfile.TemporaryDirectory(prefix=prefix) as tmpdir:
-            tmp_output_files = [open(os.path.join(tmpdir, f"maptask{task_id:05d}-part{i:05d}.txt"), "w") for i in range(num_partitions)]
+            tmp_output_files = [open(os.path.join(tmpdir, f"maptask{task_id:05d}-part{i:05d}"), "w") for i in range(num_partitions)]
             LOGGER.info("Created tmpdir %s", tmp_output_files)
             #way to keep track of reducer files
             partitions = [[] for _ in range(num_partitions)]
@@ -96,6 +97,8 @@ class Worker:
             for input_path in input_paths:
                 print("first file", input_path)
                 with open(input_path) as infile:
+                    #for line in infile:
+                        #print("line", {line})
                     with subprocess.Popen(
                         [executable],
                         stdin=infile,
@@ -103,13 +106,13 @@ class Worker:
                         text=True,
                     ) as map_process:
                         for line in map_process.stdout:
-                            print("line", line)
+                            print("line", {line})
                             #partioning manager output files
                             key = line.split('\t')
                             hexdigest = hashlib.md5(key[0].encode("utf-8")).hexdigest()
                             keyhash = int(hexdigest, base=16)
                             partition_number = keyhash % num_partitions
-                            print(f"partition num {partition_number} for line {line}")
+                            #print(f"partition num {partition_number} for line {line}")
     
                             #adds line to correct partition output file
                             tmp_output_files[partition_number].write(line)
@@ -123,7 +126,8 @@ class Worker:
                 #if os.path.exists(file.name):
                     #print("path exists, removing")
                     #os.remove(file.name)
-                dest_path = os.path.join(output_directory, os.path.basename(str(file)))
+                subprocess.run(["sort", "-o", file.name, file.name], check=True)
+                dest_path = os.path.join(output_directory, os.path.basename(file.name))
                 print(f"moving {file.name} to {dest_path}")
                 shutil.move(file.name, dest_path)
 
