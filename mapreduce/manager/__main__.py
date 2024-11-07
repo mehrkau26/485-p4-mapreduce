@@ -46,7 +46,7 @@ class Manager:
                 self.make_tasks(job)
                 print("check")
             time.sleep(0.1)
-        self.tcp_thread.join()
+        #self.tcp_thread.join()
         print("manager tcp thread joined, manager fully shut down")
 
     def start_listening_tcp(self):

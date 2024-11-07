@@ -133,10 +133,10 @@ class Worker:
                 "worker_host": self.host,
                 "worker_port": self.port
             }
-            #tcp_client(self.manager_host, self.manager_port, finished_message)
+            tcp_client(self.manager_host, self.manager_port, finished_message)
 
-        while not self.signals["shutdown"]:
-            time.sleep(0.1)
+        #while not self.signals["shutdown"]:
+            #time.sleep(0.1)
 
 
 @click.command()
