@@ -118,14 +118,14 @@ class Worker:
                     #partitioned data is written to output files in temp directory
 
             # move to output directory
-            for _, file in enumerate(partitions):
+            for _, file in enumerate(tmp_output_files):
                 file.close()
                 #if os.path.exists(file.name):
                     #print("path exists, removing")
                     #os.remove(file.name)
                 dest_path = os.path.join(output_directory, os.path.basename(str(file)))
-                print(f"moving {str(file)} to {dest_path}")
-                shutil.move(str(file), dest_path)
+                print(f"moving {file.name} to {dest_path}")
+                shutil.move(file.name, dest_path)
 
             finished_message = {
                 "message_type": "finished", 

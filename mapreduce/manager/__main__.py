@@ -97,13 +97,14 @@ class Manager:
     def assign_tasks(self):
         while not self.signals["shutdown"]:
             if self.task_queue:
-                job=self.task_queue.popleft()
+                #job=self.task_queue.popleft()
                 print(len(self.task_queue))
                 assigned = False
                 #worker_dict = self.next_available_worker()
                 # while any(worker['status'] == 'Ready' for worker in self.worker_dict.values()):
                 #print("i have a worker!")
                 for worker_port, worker_info in self.worker_dict.items():
+                    job = self.task_queue.popleft()
                     print("looking for worker")
                     if worker_info['status'] == 'Ready':
                         worker_host = worker_info['host']
@@ -112,6 +113,7 @@ class Manager:
                             print("worker assigned to task")
                             worker_info['status'] = 'Busy'
                             assigned = True
+                            #break
                         else:
                             worker_info['status'] = 'Dead'
                             print("worker is dead")
