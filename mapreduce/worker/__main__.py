@@ -2,11 +2,11 @@
 """MapReduce framework Worker node."""
 import os
 import logging
-import json
 import hashlib
 import subprocess
 import tempfile
 import time
+import shutil
 import click
 import threading
 from mapreduce.utils.network import tcp_server
@@ -116,26 +116,27 @@ class Worker:
                             print(f"writing to: {partitions[partition_number]}: {line}")
 
                     #partitioned data is written to output files in temp directory
-                    #for i, partition in enumerate(partitioning):
-                        #with open(tmp_output_files[i], 'a') as partitioned_file:
-                            #partitioned_file.write('\n'.join(partition))
 
-            # for file in tmp_output_files:
-            #     file.close()
+            # move to output directory
+            for _, file in enumerate(partitions):
+                print(f"moving {file.name} to {output_directory}")
+                if os.path.exists(file.name):
+                    print("path exists, removing")
+                    os.remove(file.name)
+                shutil.move(output_directory, file.name)
 
-            # for i in range(num_partitions):
-            #     filename = f"{tmpdir}/maptask{task_id:05d}-{i:05d}"
-            #     subprocess.run(["sort", "-o", filename, filename], check=True)
+            finished_message = {
+                "message_type": "finished", 
+                "task_id": task_id,
+                "worker_host": self.host,
+                "worker_port": self.port
+            }
+            #tcp_client(self.manager_host, self.manager_port, finished_message)
 
-            # for i in range(num_partitions):
-            #     source_file = f"{tmpdir}/maptask{task_id:05d}-{i:05d}"
-            #     output_dest = f"{output_directory}/maptask{task_id:05d}-part{i:05d}"
-            #     os.rename(source_file, output_dest)
-            
             while not self.signals["shutdown"]:
                 time.sleep(0.1)
-    
-    
+
+
 @click.command()
 @click.option("--host", "host", default="localhost")
 @click.option("--port", "port", default=6001)

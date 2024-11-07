@@ -87,6 +87,7 @@ class Manager:
             self.job_id += 1
 
         if message_dict["message_type"] == "finished":
+            print(f"finished message recieved from: {message_dict['worker_port']}")
             worker_port = message_dict['worker_port']
             self.worker_dict[worker_port]['status'] = "Ready"
     # def next_available_worker(self):
