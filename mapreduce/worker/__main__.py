@@ -119,11 +119,13 @@ class Worker:
 
             # move to output directory
             for _, file in enumerate(partitions):
+                file.close()
                 print(f"moving {file.name} to {output_directory}")
-                if os.path.exists(file.name):
-                    print("path exists, removing")
-                    os.remove(file.name)
-                shutil.move(output_directory, file.name)
+                #if os.path.exists(file.name):
+                    #print("path exists, removing")
+                    #os.remove(file.name)
+                dest_path = os.path.join(output_directory, os.path.basename(file.name))
+                shutil.move(file.name, dest_path)
 
             finished_message = {
                 "message_type": "finished", 
@@ -133,8 +135,8 @@ class Worker:
             }
             #tcp_client(self.manager_host, self.manager_port, finished_message)
 
-            while not self.signals["shutdown"]:
-                time.sleep(0.1)
+        while not self.signals["shutdown"]:
+            time.sleep(0.1)
 
 
 @click.command()

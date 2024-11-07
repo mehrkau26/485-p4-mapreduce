@@ -158,8 +158,8 @@ class Manager:
                 }
                 self.task_queue.append(message_dict)
             self.assign_tasks()
-            while not self.signals["shutdown"]: #change? until job is completed?
-                time.sleep(0.1)
+        while not self.signals["shutdown"]: #change? until job is completed?
+            time.sleep(0.1)
                 # DO MAP STAGE WORK THEN SET FINISHED TO TRUE
         LOGGER.info("Cleaned up tmpdir %s", tmpdir)
 
