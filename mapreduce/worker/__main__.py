@@ -83,25 +83,15 @@ class Worker:
         task_id = message_dict["task_id"]
         num_partitions = message_dict["num_partitions"]
 
-        # the temp directory for new_map_task
+        # Temporary directory for new map task
         with tempfile.TemporaryDirectory(
           prefix=f"mapreduce-local-task{task_id:05d}-") as tmpdir:
-            tmp_output_files = []
-            for i in range(num_partitions):
-                tmp_output_files.append(
-                    open(
-                        os.path.join(tmpdir, f"maptask{task_id:05d}-part{i:05d}"),
-                        "w", encoding="utf-8"
-                    )
-                )
-            LOGGER.info("Created tmpdir %s", tmp_output_files)
-            # way to keep track of reducer files
+            LOGGER.info("Created temporary output files in directory %s",
+                        tmpdir)
 
+            # Open each input file and process its content
             for input_path in message_dict["input_paths"]:
-                print("first file", input_path)
                 with open(input_path, encoding="utf-8") as infile:
-                    # for line in infile:
-                    # print("line", {line})
                     with subprocess.Popen(
                         [message_dict["executable"]],
                         stdin=infile,
@@ -109,42 +99,51 @@ class Worker:
                         text=True,
                     ) as map_process:
                         for line in map_process.stdout:
-                            print("line", {line})
-                            # partioning manager output files
+                            # Determine the partition for the line
                             key = line.split('\t')
-                            partition_number = (int(hashlib.md5(
-                                key[0].encode("utf-8")).hexdigest(),
-                                                16)
-                                                % num_partitions)
-                            # adds line to correct partition output file
-                            tmp_output_files[partition_number].write(line)
-                            print(f"""writing to:
-                                  {tmp_output_files[partition_number]}:
-                                  {line}""")
-                    # partitioned data is written to output files in temp
-                    # directory
+                            partition_number = (
+                                int(hashlib.md5(
+                                    key[0].encode("utf-8")).hexdigest(),
+                                    16)
+                                % num_partitions
+                            )
+                            # Define the path for the correct partition
+                            # output file
+                            file_path = os.path.join(
+                                tmpdir,
+                                f"maptask{task_id:05d}-"
+                                f"part{partition_number:05d}"
+                            )
+                            # Append line to the correct partition output file
+                            with open(file_path, "a",
+                                      encoding="utf-8") as outfile:
+                                outfile.write(line)
+                                LOGGER.debug(
+                                    "Wrote to partition %s: %s",
+                                    partition_number, line.strip())
 
-            # move to output directory
-            for file in tmp_output_files:
-                file.close()
+            # Move and sort each file to the output directory
+            for partition_number in range(num_partitions):
+                file_path = os.path.join(tmpdir,
+                                         f"maptask{task_id:05d}-"
+                                         f"part{partition_number:05d}")
                 subprocess.run(
-                    ["sort", "-o", file.name, file.name], check=True)
+                    ["sort", "-o", file_path, file_path], check=True)
                 dest_path = os.path.join(
                     message_dict["output_directory"],
-                    os.path.basename(file.name))
-                print(f"moving {file.name} to {dest_path}")
-                shutil.move(file.name, dest_path)
+                    os.path.basename(file_path))
+                LOGGER.info(
+                    "Moving sorted file %s to %s", file_path, dest_path)
+                shutil.move(file_path, dest_path)
 
+            # Notify task completion
             finished_message = {
                 "message_type": "finished",
                 "task_id": task_id,
                 "worker_host": self.host,
-                "worker_port": self.port
+                "worker_port": self.port,
             }
             tcp_client(self.manager_host, self.manager_port, finished_message)
-
-        # while not self.signals["shutdown"]:
-        # time.sleep(0.1)
 
 
 @click.command()
