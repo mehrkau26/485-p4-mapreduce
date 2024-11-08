@@ -86,15 +86,14 @@ class Worker:
         # the temp directory for new_map_task
         with tempfile.TemporaryDirectory(
           prefix=f"mapreduce-local-task{task_id:05d}-") as tmpdir:
-            tmp_output_files = [
-                open(
-                    os.path.join(
-                        tmpdir,
-                        f"maptask{task_id:05d}-part{i:05d}"
-                    ),
-                    "w", encoding="utf-8"
+            tmp_output_files = []
+            for i in range(num_partitions):
+                tmp_output_files.append(
+                    open(
+                        os.path.join(tmpdir, f"maptask{task_id:05d}-part{i:05d}"),
+                        "w", encoding="utf-8"
+                    )
                 )
-                for i in range(num_partitions)]
             LOGGER.info("Created tmpdir %s", tmp_output_files)
             # way to keep track of reducer files
 
