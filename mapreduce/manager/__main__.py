@@ -11,7 +11,7 @@ from mapreduce.utils.network import tcp_server
 from mapreduce.utils.network import tcp_client
 from mapreduce.utils.network import udp_server
 from mapreduce.utils import ThreadSafeOrderedDict
-from collections import deque 
+from collections import deque
 
 
 # Configure logging
@@ -30,7 +30,7 @@ class Manager:
         )
 
         self.host = host
-        self.port = port 
+        self.port = port
         self.job_queue = deque()
         self.task_queue = deque()
         self.job_id = 0
@@ -42,7 +42,7 @@ class Manager:
 
         while not self.signals["shutdown"]:
             if self.job_queue:
-                job=self.job_queue.popleft()
+                job = self.job_queue.popleft()
                 self.make_tasks(job)
                 print("check")
             time.sleep(0.1)
@@ -50,13 +50,19 @@ class Manager:
         print("manager tcp thread joined, manager fully shut down")
 
     def start_listening_tcp(self):
-        self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port,self.signals, self.handlemessage))
+        self.tcp_thread = threading.Thread(
+            target=tcp_server, args=(self.host, self.port, self.signals,
+                                     self.handlemessage))
         self.tcp_thread.start()
 
     def start_listening_udp(self):
-        self.udp_thread = threading.Thread(target=udp_server, args=(self.host, self.port, self.signals, self.heartbeat_checker))
+        self.udp_thread = threading.Thread(
+            target=udp_server, args=(self.host, self.port, self.signals,
+                                     self.heartbeat_checker))
+
     def heartbeat_checker(self):
         return True
+
     def handlemessage(self, message_dict):
         if message_dict["message_type"] == "register":
             with self.lock:
@@ -68,14 +74,16 @@ class Manager:
                 register_ack = {
                     "message_type": "register_ack"
                 }
-                tcp_client(message_dict["worker_host"], message_dict["worker_port"], register_ack)
+                tcp_client(message_dict["worker_host"],
+                           message_dict["worker_port"],
+                           register_ack)
                 print("ack sent to worker")
 
         if message_dict["message_type"] == "shutdown":
             self.signals["shutdown"] = True
             LOGGER.info("hello")
             for worker_port, worker_info in self.worker_dict.items():
-                worker_host = worker_info["host"] 
+                worker_host = worker_info["host"]
                 tcp_client(worker_host, worker_port, message_dict)
             # self.tcp_thread.join()
             print("manager shutting down")
@@ -87,7 +95,9 @@ class Manager:
             self.job_id += 1
 
         if message_dict["message_type"] == "finished":
-            print(f"finished message recieved from: {message_dict['worker_port']}")
+            print(
+                f"""finished message recieved from:
+                {message_dict['worker_port']}""")
             worker_port = message_dict['worker_port']
             self.worker_dict[worker_port]['status'] = "Ready"
     # def next_available_worker(self):
@@ -97,14 +107,12 @@ class Manager:
     def assign_tasks(self):
         while not self.signals["shutdown"]:
             if self.task_queue:
-                job=self.task_queue.popleft()
+                job = self.task_queue.popleft()
                 print(len(self.task_queue))
                 assigned = False
-                #worker_dict = self.next_available_worker()
-                # while any(worker['status'] == 'Ready' for worker in self.worker_dict.values()):
-                #print("i have a worker!")
+                # worker_dict = self.next_available_worker()
+                # print("i have a worker!")
                 for worker_port, worker_info in self.worker_dict.items():
-                    #job = self.task_queue.popleft()
                     print("looking for worker")
                     if worker_info['status'] == 'Ready':
                         worker_host = worker_info['host']
@@ -113,20 +121,19 @@ class Manager:
                             print("worker assigned to task")
                             worker_info['status'] = 'Busy'
                             assigned = True
-                            #break
                         else:
                             worker_info['status'] = 'Dead'
                             print("worker is dead")
                             # self.task_queue.appendLeft(job)
-                if assigned==False:
+                if assigned is False:
                     print("reassigning")
                     self.task_queue.appendleft(job)
-                #wait for worker to become available
+                # wait for worker to become available
             time.sleep(0.1)
 
     def make_tasks(self, job):
-        #delete output dir if it exists
-        #create output dir
+        # delete output dir if it exists
+        # create output dir
         if os.path.exists(job["output_directory"]):
             shutil.rmtree(job["output_directory"])
         os.mkdir(job["output_directory"])
@@ -146,7 +153,7 @@ class Manager:
                 full_path = os.path.join(job["input_directory"], file)
                 partitions[task_id].append(full_path)
 
-            #create message_dict for each task_id and add to task_queue
+            # create message_dict for each task_id and add to task_queue
             for taskid, files in enumerate(partitions):
                 print(f"Task {taskid}: {files}")
                 message_dict = {
@@ -159,12 +166,11 @@ class Manager:
                 }
                 self.task_queue.append(message_dict)
             self.assign_tasks()
-        while not self.signals["shutdown"]: #change? until job is completed?
+        while not self.signals["shutdown"]:  # change? until job is completed?
             time.sleep(0.1)
-                # DO MAP STAGE WORK THEN SET FINISHED TO TRUE
+            # DO MAP STAGE WORK THEN SET FINISHED TO TRUE
         LOGGER.info("Cleaned up tmpdir %s", tmpdir)
 
-        # partition input dir into num_mappers using round robin and assign each partition a taskid
 
 @click.command()
 @click.option("--host", "host", default="localhost")

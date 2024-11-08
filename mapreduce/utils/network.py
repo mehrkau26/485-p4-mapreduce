@@ -5,13 +5,16 @@ import threading
 import time
 
 
-#continuously listens for messages on a socket, and calls a callback "handler" function when a message is received
+# continuously listens for messages on a socket, and calls a
+# callback "handler" function when a message is received
 def tcp_server(host, port, signals, handle_func):
+    """TCP server."""
     # this is TCP
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        # allows server to listen to incomining client connections on port 8000 localhost
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
-        sock.bind((host, port)) # binds socket to port
+        # allows server to listen to incomining client connections on port
+        # 8000 localhost
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind((host, port))  # binds socket to port
         sock.listen()
         print(f"Server listening on {host}:{port}")
 
@@ -43,16 +46,13 @@ def tcp_server(host, port, signals, handle_func):
                 message_dict = json.loads(message_str)
             except json.JSONDecodeError:
                 continue
-            # if message_dict["message_type"] == "shutdown":
-            #     handle_func.appendleft(message_dict)
-            # else:
-            #     handle_func.append(message_dict)
-            # #for message in handle_func:
-                #print(message)
+
             handle_func(message_dict)
         print("thread has been terminated")
 
+
 def tcp_client(host, port, message_dict):
+    """Send message to server."""
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             message = json.dumps(message_dict)
@@ -62,11 +62,14 @@ def tcp_client(host, port, message_dict):
             print(f"message being sent: ", message)
 
             sock.sendall(message.encode('utf-8'))
-    except:
+    except (socket.error, json.JSONDecodeError, OSError) as e:
+        print(f"An error occurred: {e}")
         return False
     return True
 
+
 def udp_server(host, port, signals, handle_func):
+    """Create UDP server."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((host, port))
@@ -81,7 +84,9 @@ def udp_server(host, port, signals, handle_func):
             message_dict = json.loads(message_str)
             print(message_dict)
 
+
 def udp_client(host, port, message_dict):
+    """Listen for heartbeats."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.connect((host, port))
 

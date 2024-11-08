@@ -1,4 +1,3 @@
-
 """MapReduce framework Worker node."""
 import os
 import logging
@@ -12,7 +11,7 @@ import threading
 from mapreduce.utils.network import tcp_server
 from mapreduce.utils.network import tcp_client
 from mapreduce.utils.network import udp_server
-from collections import deque 
+from collections import deque
 
 
 # Configure logging
@@ -34,24 +33,26 @@ class Worker:
         self.host = host
         self.port = port
         self.manager_host = manager_host
-        self.manager_port = manager_port 
+        self.manager_port = manager_port
         self.signals = {"shutdown": False}
         self.job_queue = deque()
         self.register()
         self.start_listening_tcp()
 
-
         while not self.signals["shutdown"]:
             if self.job_queue:
-                job=self.job_queue.popleft()
+                job = self.job_queue.popleft()
                 self.handle_message(job)
             time.sleep(0.1)
         self.tcp_thread.join()
         print("job tcp thread joined, job fully shut down")
 
     def start_listening_tcp(self):
-         self.tcp_thread = threading.Thread(target=tcp_server, args=(self.host, self.port, self.signals, self.handle_message))
-         self.tcp_thread.start()
+        self.tcp_thread = threading.Thread(
+            target=tcp_server, args=(self.host, self.port, self.signals,
+                                     self.handle_message))
+        self.tcp_thread.start()
+
     def register(self):
         message_dict = {
             "worker_host": self.host,
@@ -81,24 +82,27 @@ class Worker:
         num_partitions = message_dict["num_partitions"]
         output_directory = message_dict["output_directory"]
 
-
-        #the temp directory for new_map_task
+        # the temp directory for new_map_task
         prefix = f"mapreduce-local-task{task_id:05d}-"
         print("prefix:", prefix)
         with tempfile.TemporaryDirectory(prefix=prefix) as tmpdir:
-            tmp_output_files = [open(os.path.join(tmpdir, f"maptask{task_id:05d}-part{i:05d}"), "w") for i in range(num_partitions)]
+            tmp_output_files = [open(
+                os.path.join(
+                    tmpdir,
+                    f"maptask{task_id:05d}-part{i:05d}"), "w")
+                    for i in range(num_partitions)]
             LOGGER.info("Created tmpdir %s", tmp_output_files)
-            #way to keep track of reducer files
+            # way to keep track of reducer files
             partitions = [[] for _ in range(num_partitions)]
             for i, file in enumerate(tmp_output_files):
                 print(f"partition, {i}, file {file}")
                 partitions[i] = file
-            
+
             for input_path in input_paths:
                 print("first file", input_path)
                 with open(input_path) as infile:
-                    #for line in infile:
-                        #print("line", {line})
+                    # for line in infile:
+                    # print("line", {line})
                     with subprocess.Popen(
                         [executable],
                         stdin=infile,
@@ -107,40 +111,40 @@ class Worker:
                     ) as map_process:
                         for line in map_process.stdout:
                             print("line", {line})
-                            #partioning manager output files
+                            # partioning manager output files
                             key = line.split('\t')
-                            hexdigest = hashlib.md5(key[0].encode("utf-8")).hexdigest()
+                            hexdigest = hashlib.md5(
+                                key[0].encode("utf-8")).hexdigest()
                             keyhash = int(hexdigest, base=16)
                             partition_number = keyhash % num_partitions
-                            #print(f"partition num {partition_number} for line {line}")
-    
-                            #adds line to correct partition output file
+                            # adds line to correct partition output file
                             tmp_output_files[partition_number].write(line)
-                            print(f"writing to: {tmp_output_files[partition_number]}: {line}")
-
-                    #partitioned data is written to output files in temp directory
+                            print(f"""writing to:
+                                  {tmp_output_files[partition_number]}:
+                                  {line}""")
+                    # partitioned data is written to output files in temp
+                    # directory
 
             # move to output directory
             for _, file in enumerate(tmp_output_files):
                 file.close()
-                #if os.path.exists(file.name):
-                    #print("path exists, removing")
-                    #os.remove(file.name)
-                subprocess.run(["sort", "-o", file.name, file.name], check=True)
-                dest_path = os.path.join(output_directory, os.path.basename(file.name))
+                subprocess.run(
+                    ["sort", "-o", file.name, file.name], check=True)
+                dest_path = os.path.join(
+                    output_directory, os.path.basename(file.name))
                 print(f"moving {file.name} to {dest_path}")
                 shutil.move(file.name, dest_path)
 
             finished_message = {
-                "message_type": "finished", 
+                "message_type": "finished",
                 "task_id": task_id,
                 "worker_host": self.host,
                 "worker_port": self.port
             }
             tcp_client(self.manager_host, self.manager_port, finished_message)
 
-        #while not self.signals["shutdown"]:
-            #time.sleep(0.1)
+        # while not self.signals["shutdown"]:
+            # time.sleep(0.1)
 
 
 @click.command()
