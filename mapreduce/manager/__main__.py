@@ -7,7 +7,6 @@ import time
 import threading
 from collections import deque
 import click
-from mapreduce.manager.job import Job
 from mapreduce.utils.network import tcp_server
 from mapreduce.utils.network import tcp_client
 from mapreduce.utils.network import udp_server
@@ -105,6 +104,7 @@ class Manager:
     #     return self.worker_dict[6001]
 
     def assign_tasks(self):
+        """Assign tasks to workers."""
         while not self.signals["shutdown"]:
             if self.task_queue:
                 job = self.task_queue.popleft()
@@ -132,6 +132,7 @@ class Manager:
             time.sleep(0.1)
 
     def make_tasks(self, job):
+        """Add tasks to queue."""
         # delete output dir if it exists
         # create output dir
         if os.path.exists(job["output_directory"]):

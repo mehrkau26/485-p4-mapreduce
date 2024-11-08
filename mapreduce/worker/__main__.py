@@ -83,13 +83,17 @@ class Worker:
         num_partitions = message_dict["num_partitions"]
 
         # the temp directory for new_map_task
-        with tempfile.TemporaryDirectory(prefix=f"mapreduce-local-task{task_id:05d}-") as tmpdir:
-            tmp_output_files = [open(
-                os.path.join(
-                    tmpdir,
-                    f"maptask{task_id:05d}-part{i:05d}"), "w",
-                    encoding="utf-8")
-                    for i in range(num_partitions)]
+        with tempfile.TemporaryDirectory(
+          prefix=f"mapreduce-local-task{task_id:05d}-") as tmpdir:
+            tmp_output_files = [
+                open(
+                    os.path.join(
+                        tmpdir,
+                        f"maptask{task_id:05d}-part{i:05d}"
+                    ),
+                    "w", encoding="utf-8"
+                )
+                for i in range(num_partitions)]
             LOGGER.info("Created tmpdir %s", tmp_output_files)
             # way to keep track of reducer files
 
@@ -108,9 +112,10 @@ class Worker:
                             print("line", {line})
                             # partioning manager output files
                             key = line.split('\t')
-                            partition_number = (int(hashlib.md5(key[0].encode("utf-8")).hexdigest(),
-                                                   16)
-                                                   % num_partitions)
+                            partition_number = (int(hashlib.md5(
+                                key[0].encode("utf-8")).hexdigest(),
+                                                16)
+                                                % num_partitions)
                             # adds line to correct partition output file
                             tmp_output_files[partition_number].write(line)
                             print(f"""writing to:
@@ -125,7 +130,8 @@ class Worker:
                 subprocess.run(
                     ["sort", "-o", file.name, file.name], check=True)
                 dest_path = os.path.join(
-                    message_dict["output_directory"], os.path.basename(file.name))
+                    message_dict["output_directory"],
+                    os.path.basename(file.name))
                 print(f"moving {file.name} to {dest_path}")
                 shutil.move(file.name, dest_path)
 
