@@ -175,6 +175,27 @@ class Manager:
             # DO MAP STAGE WORK THEN SET FINISHED TO TRUE
         LOGGER.info("Cleaned up tmpdir %s", tmpdir)
 
+    def make_reduce_tasks(self, job, shared_dir):
+        reduce_tasks = [[] for _ in range(job["num_reducers"])]
+        input_files = sorted(os.listdir(shared_dir))
+
+        for file in input_files:
+            if file.startswith("maptask") and "part" in file:
+                part_num = int(file.split("part")[1])
+                reduce_tasks[part_num].append(os.path.join(shared_dir, file))
+
+        for task_id, input_paths in enumerate(reduce_tasks):
+            if input_paths:
+                message_dict = {
+                    "message_type": "new_reduce_task",
+                    "task_id": task_id,
+                    "executable": job["reducer_executable"],
+                    "input_paths": input_paths,
+                    "output_directory": job["output_directory"]
+                }
+                self.task_queue.append(message_dict)
+
+        self.assign_tasks()
 
 @click.command()
 @click.option("--host", "host", default="localhost")
