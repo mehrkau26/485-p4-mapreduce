@@ -49,20 +49,24 @@ class Manager:
         print("manager tcp thread joined, manager fully shut down")
 
     def start_listening_tcp(self):
+        """Start TCP thread."""
         self.tcp_thread = threading.Thread(
             target=tcp_server, args=(self.host, self.port, self.signals,
                                      self.handlemessage))
         self.tcp_thread.start()
 
     def start_listening_udp(self):
+        """Start UDP thread."""
         self.udp_thread = threading.Thread(
             target=udp_server, args=(self.host, self.port, self.signals,
                                      self.heartbeat_checker))
 
     def heartbeat_checker(self):
+        """Send heartbeat."""
         return True
 
     def handlemessage(self, message_dict):
+        """Handle all messages."""
         if message_dict["message_type"] == "register":
             with self.lock:
                 self.worker_dict[message_dict["worker_port"]] = {
