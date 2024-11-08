@@ -4,14 +4,14 @@ import shutil
 import tempfile
 import logging
 import time
-import click
 import threading
+from collections import deque
+import click
 from mapreduce.manager.job import Job
 from mapreduce.utils.network import tcp_server
 from mapreduce.utils.network import tcp_client
 from mapreduce.utils.network import udp_server
 from mapreduce.utils import ThreadSafeOrderedDict
-from collections import deque
 
 
 # Configure logging

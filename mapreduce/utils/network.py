@@ -1,8 +1,6 @@
 """Thread maintenance."""
 import socket
 import json
-import threading
-import time
 
 
 # continuously listens for messages on a socket, and calls a
