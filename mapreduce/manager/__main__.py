@@ -27,16 +27,21 @@ class Manager:
             host, port, os.getcwd(),
         )
 
-        self.host = host
-        self.port = port
         self.job_queue = deque()
         self.task_queue = deque()
         self.job_id = 0
         self.lock = threading.Lock()
         self.signals = {"shutdown": False}
         self.worker_dict = ThreadSafeOrderedDict()
-        self.start_listening_tcp()
-        self.start_listening_udp()
+
+        tcp_thread = threading.Thread(
+            target=tcp_server, args=(host, port, self.signals,
+                                     self.handlemessage))
+        tcp_thread.start()
+
+        udp_thread = threading.Thread(
+            target=udp_server, args=(host, port, self.signals,
+                                     self.heartbeat_checker))
 
         while not self.signals["shutdown"]:
             if self.job_queue:
@@ -44,21 +49,8 @@ class Manager:
                 self.make_tasks(job)
                 print("check")
             time.sleep(0.1)
-        self.tcp_thread.join()
+        tcp_thread.join()
         print("manager tcp thread joined, manager fully shut down")
-
-    def start_listening_tcp(self):
-        """Start TCP thread."""
-        self.tcp_thread = threading.Thread(
-            target=tcp_server, args=(self.host, self.port, self.signals,
-                                     self.handlemessage))
-        self.tcp_thread.start()
-
-    def start_listening_udp(self):
-        """Start UDP thread."""
-        self.udp_thread = threading.Thread(
-            target=udp_server, args=(self.host, self.port, self.signals,
-                                     self.heartbeat_checker))
 
     def heartbeat_checker(self):
         """Send heartbeat."""
