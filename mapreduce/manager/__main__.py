@@ -176,6 +176,7 @@ class Manager:
         LOGGER.info("Cleaned up tmpdir %s", tmpdir)
 
     def make_reduce_tasks(self, job, shared_dir):
+        """Reduce tasks."""
         reduce_tasks = [[] for _ in range(job["num_reducers"])]
         input_files = sorted(os.listdir(shared_dir))
 
@@ -196,6 +197,7 @@ class Manager:
                 self.task_queue.append(message_dict)
 
         self.assign_tasks()
+
 
 @click.command()
 @click.option("--host", "host", default="localhost")

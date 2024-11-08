@@ -149,17 +149,18 @@ class Worker:
         # time.sleep(0.1)
 
     def handle_reduce_task(self, message_dict):
+        """Reduce task."""
         task_id = message_dict["task_id"]
         input_paths = message_dict["input_paths"]
         output_directory = message_dict["output_directory"]
         executable = message_dict["executable"]
 
-        with tempfile.TemporaryDirectory(prefix=f"mapreduce-local-task{task_id:05d}-") as tmpdir:
+        with tempfile.TemporaryDirectory(
+          prefix=f"mapreduce-local-task{task_id:05d}-") as tmpdir:
             output_file_path = os.path.join(tmpdir, f"part-{task_id:05d}")
             with open(output_file_path, "w", encoding="utf-8") as outfile:
-                #merge input files here and run executable
+                # merge input files here and run executable
                 LOGGER.info("Merging and Executing")
-            
 
         # move to final output directory here
         LOGGER.info("Moving")
@@ -172,7 +173,6 @@ class Worker:
             }
         tcp_client(self.manager_host, self.manager_port, finished_message)
         LOGGER.info("Sent finished message to Manager")
-
 
 
 @click.command()
