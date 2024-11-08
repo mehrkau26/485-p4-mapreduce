@@ -47,6 +47,8 @@ class Manager:
             if self.job_queue:
                 job = self.job_queue.popleft()
                 self.make_tasks(job)
+                self.num_tasks = 0
+                self.finished_tasks = 0
                 print("check")
             time.sleep(0.1)
         tcp_thread.join()
@@ -94,6 +96,7 @@ class Manager:
                 {message_dict['worker_port']}""")
             worker_port = message_dict['worker_port']
             self.worker_dict[worker_port]['status'] = "Ready"
+            self.finished_tasks += 1
     # def next_available_worker(self):
     #     print("found worker")
     #     return self.worker_dict[6001]
@@ -102,11 +105,8 @@ class Manager:
         """Assign tasks to workers."""
         while not self.signals["shutdown"]:
             if self.task_queue:
-                #job = self.task_queue.popleft()
                 print(len(self.task_queue))
                 assigned = False
-                # worker_dict = self.next_available_worker()
-                # print("i have a worker!")
                 for worker_port, worker_info in self.worker_dict.items():
                     job = self.task_queue.popleft()
                     print("looking for worker")
@@ -117,10 +117,10 @@ class Manager:
                             print("worker assigned to task")
                             worker_info['status'] = 'Busy'
                             assigned = True
+                            self.num_tasks += 1
                         else:
                             worker_info['status'] = 'Dead'
                             print("worker is dead")
-                            # self.task_queue.appendLeft(job)
                     if assigned is False:
                         print("reassigning")
                         self.task_queue.appendleft(job)
@@ -163,6 +163,9 @@ class Manager:
                 }
                 self.task_queue.append(message_dict)
             self.assign_tasks()
+            print(f"total tasks: {self.num_tasks} finished tasks: {self.finished_tasks}" )
+            if self.num_tasks == self.finished_tasks:
+                self.make_reduce_tasks()
         while not self.signals["shutdown"]:  # change? until job is completed?
             time.sleep(0.1)
             # DO MAP STAGE WORK THEN SET FINISHED TO TRUE
@@ -170,26 +173,27 @@ class Manager:
 
     def make_reduce_tasks(self, job, shared_dir):
         """Reduce tasks."""
-        reduce_tasks = [[] for _ in range(job["num_reducers"])]
-        input_files = sorted(os.listdir(shared_dir))
+        print("entering reduce tasks")
+        # reduce_tasks = [[] for _ in range(job["num_reducers"])]
+        # input_files = sorted(os.listdir(shared_dir))
 
-        for file in input_files:
-            if file.startswith("maptask") and "part" in file:
-                part_num = int(file.split("part")[1])
-                reduce_tasks[part_num].append(os.path.join(shared_dir, file))
+        # for file in input_files:
+        #     if file.startswith("maptask") and "part" in file:
+        #         part_num = int(file.split("part")[1])
+        #         reduce_tasks[part_num].append(os.path.join(shared_dir, file))
 
-        for task_id, input_paths in enumerate(reduce_tasks):
-            if input_paths:
-                message_dict = {
-                    "message_type": "new_reduce_task",
-                    "task_id": task_id,
-                    "executable": job["reducer_executable"],
-                    "input_paths": input_paths,
-                    "output_directory": job["output_directory"]
-                }
-                self.task_queue.append(message_dict)
+        # for task_id, input_paths in enumerate(reduce_tasks):
+        #     if input_paths:
+        #         message_dict = {
+        #             "message_type": "new_reduce_task",
+        #             "task_id": task_id,
+        #             "executable": job["reducer_executable"],
+        #             "input_paths": input_paths,
+        #             "output_directory": job["output_directory"]
+        #         }
+        #         self.task_queue.append(message_dict)
 
-        self.assign_tasks()
+        # self.assign_tasks()
 
 
 @click.command()
