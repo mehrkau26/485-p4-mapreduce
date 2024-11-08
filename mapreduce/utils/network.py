@@ -57,7 +57,7 @@ def tcp_client(host, port, message_dict):
             print(f"Connecting to server at {host}:{port}")
             # connect to the server
             sock.connect((host, port))
-            print(f"message being sent: ", message)
+            print("message being sent: ", message)
 
             sock.sendall(message.encode('utf-8'))
     except (socket.error, json.JSONDecodeError, OSError) as e:
@@ -66,7 +66,8 @@ def tcp_client(host, port, message_dict):
     return True
 
 
-def udp_server(host, port, signals, handle_func):
+# removed signals, handle_func in udp_server for AG tests
+def udp_server(host, port):
     """Create UDP server."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

@@ -1,6 +1,12 @@
+"""Job class."""
+
+
 # use deque data structure
 class Job:
+    """Job class."""
+
     def __init__(self, message_dict):
+        """Assign job message."""
         if message_dict["message_type"] == "new_manager_job":
             self.input_dir = message_dict["input_directory"]
             self.mapper_exec = message_dict["mapper_executable"]
@@ -22,6 +28,7 @@ class Job:
         """Mark a pending task as completed."""
 
     def execute_job(self):
+        """Do job."""
         print("execute")
         # partion files
         # assign task
