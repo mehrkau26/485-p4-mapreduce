@@ -30,6 +30,9 @@ class Manager:
         self.job_queue = deque()
         self.task_queue = deque()
         self.job_id = 0
+        self.num_tasks = 0
+        self.finished_tasks = 0
+        self.finished = False
         self.lock = threading.Lock()
         self.signals = {"shutdown": False}
         self.worker_dict = ThreadSafeOrderedDict()
@@ -97,13 +100,16 @@ class Manager:
             worker_port = message_dict['worker_port']
             self.worker_dict[worker_port]['status'] = "Ready"
             self.finished_tasks += 1
+            if(self.num_tasks == self.finished_tasks):
+                print("finished!")
+                self.finished = True
     # def next_available_worker(self):
     #     print("found worker")
     #     return self.worker_dict[6001]
 
     def assign_tasks(self):
         """Assign tasks to workers."""
-        while not self.signals["shutdown"]:
+        while not self.signals["shutdown"] and not self.finished:
             if self.task_queue:
                 print(len(self.task_queue))
                 assigned = False
@@ -125,6 +131,9 @@ class Manager:
                         print("reassigning")
                         self.task_queue.appendleft(job)
                 # wait for worker to become available
+            # print(f"total tasks: {self.num_tasks} finished tasks: {self.finished_tasks}" )
+            # if self.num_tasks == self.finished_tasks:
+            #     self.make_reduce_tasks(job)
             time.sleep(0.1)
 
     def make_tasks(self, job):
@@ -163,37 +172,37 @@ class Manager:
                 }
                 self.task_queue.append(message_dict)
             self.assign_tasks()
-            print(f"total tasks: {self.num_tasks} finished tasks: {self.finished_tasks}" )
-            if self.num_tasks == self.finished_tasks:
-                self.make_reduce_tasks()
+            print("finished, entering reduce logic")
+            self.make_reduce_tasks(job, tmpdir)
         while not self.signals["shutdown"]:  # change? until job is completed?
             time.sleep(0.1)
             # DO MAP STAGE WORK THEN SET FINISHED TO TRUE
         LOGGER.info("Cleaned up tmpdir %s", tmpdir)
 
-    def make_reduce_tasks(self, job, shared_dir):
+    def make_reduce_tasks(self,job, tmpdir):
         """Reduce tasks."""
         print("entering reduce tasks")
-        # reduce_tasks = [[] for _ in range(job["num_reducers"])]
-        # input_files = sorted(os.listdir(shared_dir))
+        reduce_tasks = [[] for _ in range(job["num_reducers"])]
+        input_files = sorted(os.listdir(tmpdir))
 
-        # for file in input_files:
-        #     if file.startswith("maptask") and "part" in file:
-        #         part_num = int(file.split("part")[1])
-        #         reduce_tasks[part_num].append(os.path.join(shared_dir, file))
-
-        # for task_id, input_paths in enumerate(reduce_tasks):
-        #     if input_paths:
-        #         message_dict = {
-        #             "message_type": "new_reduce_task",
-        #             "task_id": task_id,
-        #             "executable": job["reducer_executable"],
-        #             "input_paths": input_paths,
-        #             "output_directory": job["output_directory"]
-        #         }
-        #         self.task_queue.append(message_dict)
-
-        # self.assign_tasks()
+        for file in input_files:
+            print(f"file from map task: {file}")
+            part_num = int(file.split("part")[1])
+            print(f"partition numbers: {part_num}")
+            reduce_tasks[part_num].append(os.path.join(tmpdir, file))
+        
+        for i , file in enumerate(reduce_tasks):
+            print(f"part_num: {i}, file {file}")
+            reduce_task = {
+                "message_type": "new_reduce_task",
+                "task_id": i,
+                "executable": job["reducer_executable"],
+                "input_paths": file,
+                "output_directory": job["output_directory"]
+            }
+            self.task_queue.append(reduce_task)
+        self.finished = False
+        self.assign_tasks()
 
 
 @click.command()
