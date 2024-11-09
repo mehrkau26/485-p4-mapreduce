@@ -101,7 +101,7 @@ class Manager:
             worker_port = message_dict['worker_port']
             self.worker_dict[worker_port]['status'] = "Ready"
             self.finished_tasks += 1
-            if(self.num_tasks == self.finished_tasks):
+            if self.num_tasks == self.finished_tasks:
                 print("finished!")
                 self.finished = True
     # def next_available_worker(self):
@@ -178,7 +178,8 @@ class Manager:
             print("finished, entering reduce logic")
             self.make_reduce_tasks(job, tmpdir)
 
-        while not self.signals["shutdown"] and not self.finished_all:  # change? until job is completed?
+        # change? until job is completed?
+        while not self.signals["shutdown"] and not self.finished_all:
             time.sleep(0.1)
             # DO MAP STAGE WORK THEN SET FINISHED TO TRUE
         LOGGER.info("Cleaned up tmpdir %s", tmpdir)
@@ -197,7 +198,7 @@ class Manager:
             part_num = int(file.split("part")[1])
             print(f"partition numbers: {part_num}")
             reduce_tasks[part_num].append(os.path.join(tmpdir, file))
-        
+
         for i , file in enumerate(reduce_tasks):
             print(f"part_num: {i}, file {file}")
             reduce_task = {

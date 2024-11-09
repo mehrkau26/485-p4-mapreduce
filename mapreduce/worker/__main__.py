@@ -1,4 +1,5 @@
 """MapReduce framework Worker node."""
+import contextlib
 import os
 import threading
 import logging
@@ -158,37 +159,36 @@ class Worker:
         """Reduce task."""
         task_id = message_dict["task_id"]
         input_paths = message_dict["input_paths"]
-        output_directory = message_dict["output_directory"]
         executable = message_dict["executable"]
 
         with tempfile.TemporaryDirectory(
           prefix=f"mapreduce-local-task{task_id:05d}-") as tmpdir:
             output_file_path = os.path.join(tmpdir, f"part-{task_id:05d}")
-            files = []
-            for input_file in input_paths:
-                files.append(open(input_file))
-           
-            with open(output_file_path, "w", encoding="utf-8") as outfile:
-                with subprocess.Popen(
-                    [executable],
-                    text = True,
-                    stdin=subprocess.PIPE,
-                    stdout = outfile,
-                ) as reduce_process:
-                    for line in heapq.merge(*files):
-                        reduce_process.stdin.write(line)
-            
+            with contextlib.ExitStack() as stack:
+                files = [stack.enter_context(
+                    open(input_file, encoding="utf-8")) for input_file in input_paths]
+                with open(output_file_path, "w", encoding="utf-8") as outfile:
+                    with subprocess.Popen(
+                        [executable],
+                        text = True,
+                        stdin=subprocess.PIPE,
+                        stdout = outfile,
+                    ) as reduce_process:
+                        for line in heapq.merge(*files):
+                            reduce_process.stdin.write(line)
+
             for file in files:
                 file.close()
             # Check the contents of the output file for verification
             with open(output_file_path, 'r', encoding='utf-8') as outfile:
                 print(outfile.read())
-            
-            dest_path = os.path.join(message_dict["output_directory"], os.path.basename(output_file_path))
+
+            dest_path = os.path.join(message_dict["output_directory"],
+                                    os.path.basename(output_file_path))
             LOGGER.info(
                 "Moving sorted file %s to %s", output_file_path, dest_path)
             shutil.move(output_file_path, dest_path)
-            
+
         # move to final output directory here
 
         finished_message = {
