@@ -13,11 +13,14 @@ from collections import deque
 import click
 from mapreduce.utils.network import tcp_server
 from mapreduce.utils.network import tcp_client
+from mapreduce.utils.network import udp_server
+from mapreduce.utils.network import udp_client
 
 
 # Configure logging
 LOGGER = logging.getLogger(__name__)
 
+HEARTBEAT_INTERVAL = 2  # 1 ping is 2 seconds
 
 class Worker:
     """A class representing a Worker node in a MapReduce cluster."""
@@ -40,6 +43,10 @@ class Worker:
         self.job_queue = deque()
         self.register()
         self.start_listening_tcp()
+        udp_thread = threading.Thread(
+        target=udp_server, args=(self.host, self.port, self.signals, self.send_heartbeat))
+        udp_thread.daemon = True  # This ensures the thread stops when the main program exits
+        udp_thread.start()
 
         while not self.signals["shutdown"]:
             if self.job_queue:
@@ -58,6 +65,16 @@ class Worker:
             target=tcp_server, args=(self.host, self.port, self.signals,
                                      self.handle_message))
         self.tcp_thread.start()
+
+    def send_heartbeat(self):
+        while True:
+            message_dict = {
+                "message_type": "heartbeat",
+                "worker_host": self.host,
+                "worker_port": self.port
+            }
+            udp_client(self.manager_host, self.manager_port, message_dict)
+            time.sleep(HEARTBEAT_INTERVAL)
 
     def register(self):
         """Register workers."""

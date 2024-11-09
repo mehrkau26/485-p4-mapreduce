@@ -16,6 +16,8 @@ from mapreduce.utils import ThreadSafeOrderedDict
 # Configure logging
 LOGGER = logging.getLogger(__name__)
 
+HEARTBEAT_INTERVAL = 2  # 1 ping is 2 seconds
+HEARTBEAT_TIMEOUT = 10  #10 seconds or 5 pings)
 
 class Manager:
     """Represent a MapReduce framework Manager node."""
@@ -37,6 +39,7 @@ class Manager:
         self.lock = threading.Lock()
         self.signals = {"shutdown": False}
         self.worker_dict = ThreadSafeOrderedDict()
+        self.last_heartbeat = {}
 
         tcp_thread = threading.Thread(
             target=tcp_server, args=(host, port, self.signals,
@@ -46,6 +49,7 @@ class Manager:
         udp_thread = threading.Thread(
             target=udp_server, args=(host, port, self.signals,
                                      self.heartbeat_checker))
+        udp_thread.start()
 
         while not self.signals["shutdown"]:
             if self.job_queue:
@@ -60,7 +64,16 @@ class Manager:
 
     def heartbeat_checker(self):
         """Send heartbeat."""
-        return True
+        while not self.signals["shutdown"]:
+            current_time = time.time()
+            with self.lock:
+                for worker_port, last_time in list(self.last_heartbeat.items()):
+                    if current_time - last_time > HEARTBEAT_TIMEOUT:
+                        if self.worker_dict[worker_port]['status'] != 'Dead':
+                            LOGGER.warning(f"Worker {worker_port} marked as dead due to missed heartbeats.")
+                            self.worker_dict[worker_port]['status'] = 'Dead'
+                            self.reassign_tasks(worker_port)
+            time.sleep(HEARTBEAT_INTERVAL)
 
     def handlemessage(self, message_dict):
         """Handle all messages."""
@@ -78,6 +91,13 @@ class Manager:
                            message_dict["worker_port"],
                            register_ack)
                 print("ack sent to worker")
+
+        if message_dict["message_type"] == "heartbeat":
+            worker_port = message_dict["worker_port"]
+            with self.lock:
+                if worker_port in self.worker_dict:
+                    self.last_heartbeat[worker_port] = time.time()
+                    LOGGER.debug(f"Heartbeat received from worker {worker_port}")
 
         if message_dict["message_type"] == "shutdown":
             self.signals["shutdown"] = True
@@ -107,7 +127,13 @@ class Manager:
     # def next_available_worker(self):
     #     print("found worker")
     #     return self.worker_dict[6001]
-
+    def reassign_tasks(self, worker_port):
+        """Reassign tasks that were assigned to a dead worker"""
+        LOGGER.info(f"Reassigning tasks for worker {worker_port}")
+        for task in list(self.task_queue):
+            if task.get('worker_port') == worker_port:
+                task.pop('worker_port', None)
+                self.task_queue.appendleft(task)
     def assign_tasks(self):
         """Assign tasks to workers."""
         while not self.signals["shutdown"] and not self.finished:

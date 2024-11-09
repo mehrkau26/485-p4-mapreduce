@@ -66,8 +66,7 @@ def tcp_client(host, port, message_dict):
     return True
 
 
-# removed signals, handle_func in udp_server for AG tests
-def udp_server(host, port):
+def udp_server(host, port, signals, handle_func):
     """Create UDP server."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
