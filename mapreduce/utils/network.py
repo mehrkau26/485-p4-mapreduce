@@ -73,7 +73,7 @@ def udp_server(host, port, signals, handle_func):
         sock.bind((host, port))
         sock.settimeout(1)
 
-        while True:
+        while not signals["shutdown"]:
             try:
                 message_bytes = sock.recv(4096)
             except socket.timeout:
@@ -81,7 +81,7 @@ def udp_server(host, port, signals, handle_func):
             message_str = message_bytes.decode("utf-8")
             message_dict = json.loads(message_str)
             handle_func(message_dict)
-
+        print("udp_thread shutdown")
 
 def udp_client(host, port, message_dict):
     """Listen for heartbeats."""

@@ -77,6 +77,8 @@ class Worker:
             udp_client(self.manager_host, self.manager_port, message_dict)
             print("sent heartbeat message")
             time.sleep(HEARTBEAT_INTERVAL)
+        self.tcp_thread.join()
+        print("heartbeat thread joined, shutting down")
 
     def register(self):
         """Register workers."""

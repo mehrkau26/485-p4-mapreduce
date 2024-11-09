@@ -40,10 +40,10 @@ class Manager:
         self.signals = {"shutdown": False}
         self.worker_dict = ThreadSafeOrderedDict()
 
-        tcp_thread = threading.Thread(
+        self.tcp_thread = threading.Thread(
             target=tcp_server, args=(host, port, self.signals,
                                      self.handlemessage))
-        tcp_thread.start()
+        self.tcp_thread.start()
 
         udp_thread = threading.Thread(
             target=udp_server, args=(host, port, self.signals,
@@ -58,7 +58,7 @@ class Manager:
                 self.finished_tasks = 0
                 print("check")
             time.sleep(0.1)
-        tcp_thread.join()
+        self.tcp_thread.join()
         print("manager tcp thread joined, manager fully shut down")
 
     def heartbeat_checker(self, message_dict):
@@ -83,6 +83,8 @@ class Manager:
                             self.worker_dict[worker_port]['status'] = 'Dead'
                             self.reassign_tasks(worker_port)
             time.sleep(HEARTBEAT_INTERVAL)
+        self.tcp_thread.join()
+        print("heartbeat checker thread joined, shutting down")
 
     def handlemessage(self, message_dict):
         """Handle all messages."""
