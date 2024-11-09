@@ -33,6 +33,7 @@ class Manager:
         self.num_tasks = 0
         self.finished_tasks = 0
         self.finished = False
+        self.finished_all = False
         self.lock = threading.Lock()
         self.signals = {"shutdown": False}
         self.worker_dict = ThreadSafeOrderedDict()
@@ -123,7 +124,7 @@ class Manager:
                             print("worker assigned to task")
                             worker_info['status'] = 'Busy'
                             assigned = True
-                            self.num_tasks += 1
+                            #self.num_tasks += 1
                         else:
                             worker_info['status'] = 'Dead'
                             print("worker is dead")
@@ -170,11 +171,14 @@ class Manager:
                     "output_directory": tmpdir,
                     "num_partitions": job["num_reducers"]
                 }
+                self.num_tasks += 1
                 self.task_queue.append(message_dict)
+            print("num map tasks", self.num_tasks)
             self.assign_tasks()
             print("finished, entering reduce logic")
             self.make_reduce_tasks(job, tmpdir)
-        while not self.signals["shutdown"]:  # change? until job is completed?
+
+        while not self.signals["shutdown"] and not self.finished_all:  # change? until job is completed?
             time.sleep(0.1)
             # DO MAP STAGE WORK THEN SET FINISHED TO TRUE
         LOGGER.info("Cleaned up tmpdir %s", tmpdir)
@@ -182,6 +186,9 @@ class Manager:
     def make_reduce_tasks(self,job, tmpdir):
         """Reduce tasks."""
         print("entering reduce tasks")
+        self.num_tasks = 0
+        self.finished_tasks = 0
+        print("reset num_tasks and finished tasks", self.num_tasks)
         reduce_tasks = [[] for _ in range(job["num_reducers"])]
         input_files = sorted(os.listdir(tmpdir))
 
@@ -200,9 +207,13 @@ class Manager:
                 "input_paths": file,
                 "output_directory": job["output_directory"]
             }
+            self.num_tasks += 1
             self.task_queue.append(reduce_task)
         self.finished = False
+        print("num reduce tasks", self.num_tasks)
         self.assign_tasks()
+        print("finished everything yay")
+        self.finished_all = True
 
 
 @click.command()

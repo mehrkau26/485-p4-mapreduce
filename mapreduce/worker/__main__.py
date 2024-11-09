@@ -198,7 +198,7 @@ class Worker:
                 "worker_port": self.port
             }
         tcp_client(self.manager_host, self.manager_port, finished_message)
-        LOGGER.info("Sent finished message to Manager")
+        LOGGER.info("Sent finished reducer message to Manager")
 
 
 @click.command()
