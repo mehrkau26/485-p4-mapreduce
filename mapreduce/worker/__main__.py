@@ -105,7 +105,6 @@ class Worker:
     def handle_map_task(self, message_dict):
         """Partition & assign workers."""
         task_id = message_dict["task_id"]
-        num_partitions = message_dict["num_partitions"]
 
         # Temporary directory for new map task
         with tempfile.TemporaryDirectory(
@@ -116,9 +115,13 @@ class Worker:
             with contextlib.ExitStack() as stack:
                 partition_files = {
                     partition_number: stack.enter_context(
-                        open(os.path.join(tmpdir, f"maptask{task_id:05d}-part{partition_number:05d}"), "a", encoding="utf-8")
+                        open(
+                            os.path.join(
+                                tmpdir,
+                                f"maptask{task_id:05d}-part{partition_number:05d}"),
+                                "a", encoding="utf-8")
                     )
-                    for partition_number in range(num_partitions)
+                    for partition_number in range(message_dict["num_partitions"])
                 }
                 for input_path in message_dict["input_paths"]:
                     with open(input_path, encoding="utf-8") as infile:
@@ -130,25 +133,13 @@ class Worker:
                         ) as map_process:
                             for line in map_process.stdout:
                                 # Determine the partition for the line
-                                key = line.split('\t')
                                 partition_number = (
                                     int(hashlib.md5(
-                                        key[0].encode("utf-8")).hexdigest(),
+                                        line.split('\t')[0].encode("utf-8")).hexdigest(),
                                         16)
-                                    % num_partitions
+                                    % (message_dict["num_partitions"])
                                 )
-                                # Define the path for the correct partition
-                                # output file
                                 partition_files[partition_number].write(line)
-                                #file_path = os.path.join(
-                                #    tmpdir,
-                                #    f"maptask{task_id:05d}-"
-                                #    f"part{partition_number:05d}"
-                                #)
-                                # Append line to the correct partition output file
-                                #with open(file_path, "a",
-                                #        encoding="utf-8") as outfile:
-                                #    outfile.write(line)
                                 LOGGER.debug(
                                     "Wrote to partition %s: %s",
                                     partition_number, line.strip())
@@ -156,7 +147,7 @@ class Worker:
                 # Move and sort each file to the output directory
                 for partition_number, file_handle in partition_files.items():
                     file_handle.close()
-                #for partition_number in range(num_partitions):
+                # for partition_number in range(num_partitions):
                     file_path = os.path.join(tmpdir,
                                             f"maptask{task_id:05d}-"
                                             f"part{partition_number:05d}")
