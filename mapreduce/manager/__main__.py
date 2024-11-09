@@ -39,7 +39,6 @@ class Manager:
         self.lock = threading.Lock()
         self.signals = {"shutdown": False}
         self.worker_dict = ThreadSafeOrderedDict()
-        self.last_heartbeat = {}
 
         tcp_thread = threading.Thread(
             target=tcp_server, args=(host, port, self.signals,
@@ -68,15 +67,16 @@ class Manager:
 
         while not self.signals["shutdown"]:
             if message_dict["message_type"] == "heartbeat":
-                print("received heartbeat")
+                print(f"received heartbeat from {message_dict['worker_port']}")
                 worker_port = message_dict["worker_port"]
                 with self.lock:
                     if worker_port in self.worker_dict:
-                        self.last_heartbeat[worker_port] = time.time()
+                        self.worker_dict[worker_port]['last_heartbeat'] = float(time.time())
                         LOGGER.debug(f"Heartbeat received from worker {worker_port}")
-                current_time = time.time()
+            current_time = float(time.time())
             with self.lock:
-                for worker_port, last_time in list(self.last_heartbeat.items()):
+                for worker_port, worker_data in self.worker_dict.items():
+                    last_time = float(worker_data.get('last_heartbeat', 0))
                     if current_time - last_time > HEARTBEAT_TIMEOUT:
                         if self.worker_dict[worker_port]['status'] != 'Dead':
                             LOGGER.warning(f"Worker {worker_port} marked as dead due to missed heartbeats.")
@@ -90,9 +90,9 @@ class Manager:
             with self.lock:
                 self.worker_dict[message_dict["worker_port"]] = {
                     'host': message_dict["worker_host"],
-                    'status': 'Ready'
+                    'status': 'Ready',
+                    'last_heartbeat': 0
                 }
-            # print("worker added:" + self.worker_dict["worker_port"])
                 register_ack = {
                     "message_type": "register_ack"
                 }
