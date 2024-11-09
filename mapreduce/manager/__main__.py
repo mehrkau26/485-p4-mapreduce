@@ -62,8 +62,17 @@ class Manager:
         tcp_thread.join()
         print("manager tcp thread joined, manager fully shut down")
 
-    def heartbeat_checker(self):
+    def heartbeat_checker(self, message_dict):
+        print("start of function heartbeat_checker")
         """Send heartbeat."""
+        if message_dict["message_type"] == "heartbeat":
+            print("received heartbeat")
+            worker_port = message_dict["worker_port"]
+            with self.lock:
+                if worker_port in self.worker_dict:
+                    self.last_heartbeat[worker_port] = time.time()
+                    LOGGER.debug(f"Heartbeat received from worker {worker_port}")
+
         while not self.signals["shutdown"]:
             current_time = time.time()
             with self.lock:
@@ -91,13 +100,6 @@ class Manager:
                            message_dict["worker_port"],
                            register_ack)
                 print("ack sent to worker")
-
-        if message_dict["message_type"] == "heartbeat":
-            worker_port = message_dict["worker_port"]
-            with self.lock:
-                if worker_port in self.worker_dict:
-                    self.last_heartbeat[worker_port] = time.time()
-                    LOGGER.debug(f"Heartbeat received from worker {worker_port}")
 
         if message_dict["message_type"] == "shutdown":
             self.signals["shutdown"] = True

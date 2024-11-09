@@ -80,7 +80,7 @@ def udp_server(host, port, signals, handle_func):
                 continue
             message_str = message_bytes.decode("utf-8")
             message_dict = json.loads(message_str)
-            print(message_dict)
+            handle_func(message_dict)
 
 
 def udp_client(host, port, message_dict):
@@ -90,4 +90,5 @@ def udp_client(host, port, message_dict):
 
         # Send a message
         message = json.dumps(message_dict)
+        print("message being sent: ", message)
         sock.sendall(message.encode('utf-8'))

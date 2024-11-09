@@ -43,10 +43,10 @@ class Worker:
         self.job_queue = deque()
         self.register()
         self.start_listening_tcp()
-        udp_thread = threading.Thread(
-        target=udp_server, args=(self.host, self.port, self.signals, self.send_heartbeat))
-        udp_thread.daemon = True  # This ensures the thread stops when the main program exits
-        udp_thread.start()
+        self.udp_thread = threading.Thread(
+            target=udp_server, args=(host, port, self.signals, self.send_heartbeat))
+        #udp_thread.daemon = True  # This ensures the thread stops when the main program exits
+        #udp_thread.start()
 
         while not self.signals["shutdown"]:
             if self.job_queue:
@@ -67,13 +67,15 @@ class Worker:
         self.tcp_thread.start()
 
     def send_heartbeat(self):
-        while True:
+        print("entering send_heartbeat")
+        while not self.signals["shutdown"]:
             message_dict = {
                 "message_type": "heartbeat",
                 "worker_host": self.host,
                 "worker_port": self.port
             }
             udp_client(self.manager_host, self.manager_port, message_dict)
+            print("sent heartbeat message")
             time.sleep(HEARTBEAT_INTERVAL)
 
     def register(self):
@@ -89,7 +91,8 @@ class Worker:
     def handle_message(self, message_dict):
         """Fundamental messaging."""
         if message_dict["message_type"] == "register_ack":
-            print("ack recieved from manager")
+            print("starting to send heartbeats")
+            self.send_heartbeat()
         if message_dict["message_type"] == "new_map_task":
             print("new map task message received")
             self.job_queue.append(message_dict)
