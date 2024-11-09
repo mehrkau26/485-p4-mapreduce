@@ -6,6 +6,7 @@ import hashlib
 import subprocess
 import tempfile
 import time
+import heapq
 import shutil
 from collections import deque
 import click
@@ -42,7 +43,10 @@ class Worker:
         while not self.signals["shutdown"]:
             if self.job_queue:
                 job = self.job_queue.popleft()
-                self.handle_message(job)
+                if job["message_type"] == "new_map_task":
+                    self.handle_map_task(job)
+                else:
+                    self.handle_reduce_task(job)
             time.sleep(0.1)
         self.tcp_thread.join()
         print("job tcp thread joined, job fully shut down")
@@ -70,8 +74,10 @@ class Worker:
             print("ack recieved from manager")
         if message_dict["message_type"] == "new_map_task":
             print("new map task message received")
-            self.handle_map_task(message_dict)
-
+            self.job_queue.append(message_dict)
+        if message_dict["message_type"] == "new_reduce_task":
+            print("new reduce task message received")
+            self.job_queue.append(message_dict)
         if message_dict["message_type"] == "shutdown":
             print("shutdown message received")
             self.signals["shutdown"] = True
@@ -158,12 +164,32 @@ class Worker:
         with tempfile.TemporaryDirectory(
           prefix=f"mapreduce-local-task{task_id:05d}-") as tmpdir:
             output_file_path = os.path.join(tmpdir, f"part-{task_id:05d}")
+            files = []
+            for input_file in input_paths:
+                files.append(open(input_file))
+           
             with open(output_file_path, "w", encoding="utf-8") as outfile:
-                # merge input files here and run executable
-                LOGGER.info("Merging and Executing")
-
+                with subprocess.Popen(
+                    [executable],
+                    text = True,
+                    stdin=subprocess.PIPE,
+                    stdout = outfile,
+                ) as reduce_process:
+                    for line in heapq.merge(*files):
+                        reduce_process.stdin.write(line)
+            
+            for file in files:
+                file.close()
+            # Check the contents of the output file for verification
+            with open(output_file_path, 'r', encoding='utf-8') as outfile:
+                print(outfile.read())
+            
+            dest_path = os.path.join(message_dict["output_directory"], os.path.basename(output_file_path))
+            LOGGER.info(
+                "Moving sorted file %s to %s", output_file_path, dest_path)
+            shutil.move(output_file_path, dest_path)
+            
         # move to final output directory here
-        LOGGER.info("Moving")
 
         finished_message = {
                 "message_type": "finished",
