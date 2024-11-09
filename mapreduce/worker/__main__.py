@@ -95,53 +95,62 @@ class Worker:
           prefix=f"mapreduce-local-task{task_id:05d}-") as tmpdir:
             LOGGER.info("Created temporary output files in directory %s",
                         tmpdir)
-
             # Open each input file and process its content
-            for input_path in message_dict["input_paths"]:
-                with open(input_path, encoding="utf-8") as infile:
-                    with subprocess.Popen(
-                        [message_dict["executable"]],
-                        stdin=infile,
-                        stdout=subprocess.PIPE,
-                        text=True,
-                    ) as map_process:
-                        for line in map_process.stdout:
-                            # Determine the partition for the line
-                            key = line.split('\t')
-                            partition_number = (
-                                int(hashlib.md5(
-                                    key[0].encode("utf-8")).hexdigest(),
-                                    16)
-                                % num_partitions
-                            )
-                            # Define the path for the correct partition
-                            # output file
-                            file_path = os.path.join(
-                                tmpdir,
-                                f"maptask{task_id:05d}-"
-                                f"part{partition_number:05d}"
-                            )
-                            # Append line to the correct partition output file
-                            with open(file_path, "a",
-                                      encoding="utf-8") as outfile:
-                                outfile.write(line)
+            with contextlib.ExitStack() as stack:
+                partition_files = {
+                    partition_number: stack.enter_context(
+                        open(os.path.join(tmpdir, f"maptask{task_id:05d}-part{partition_number:05d}"), "a", encoding="utf-8")
+                    )
+                    for partition_number in range(num_partitions)
+                }
+                for input_path in message_dict["input_paths"]:
+                    with open(input_path, encoding="utf-8") as infile:
+                        with subprocess.Popen(
+                            [message_dict["executable"]],
+                            stdin=infile,
+                            stdout=subprocess.PIPE,
+                            text=True,
+                        ) as map_process:
+                            for line in map_process.stdout:
+                                # Determine the partition for the line
+                                key = line.split('\t')
+                                partition_number = (
+                                    int(hashlib.md5(
+                                        key[0].encode("utf-8")).hexdigest(),
+                                        16)
+                                    % num_partitions
+                                )
+                                # Define the path for the correct partition
+                                # output file
+                                partition_files[partition_number].write(line)
+                                #file_path = os.path.join(
+                                #    tmpdir,
+                                #    f"maptask{task_id:05d}-"
+                                #    f"part{partition_number:05d}"
+                                #)
+                                # Append line to the correct partition output file
+                                #with open(file_path, "a",
+                                #        encoding="utf-8") as outfile:
+                                #    outfile.write(line)
                                 LOGGER.debug(
                                     "Wrote to partition %s: %s",
                                     partition_number, line.strip())
 
-            # Move and sort each file to the output directory
-            for partition_number in range(num_partitions):
-                file_path = os.path.join(tmpdir,
-                                         f"maptask{task_id:05d}-"
-                                         f"part{partition_number:05d}")
-                subprocess.run(
-                    ["sort", "-o", file_path, file_path], check=True)
-                dest_path = os.path.join(
-                    message_dict["output_directory"],
-                    os.path.basename(file_path))
-                LOGGER.info(
-                    "Moving sorted file %s to %s", file_path, dest_path)
-                shutil.move(file_path, dest_path)
+                # Move and sort each file to the output directory
+                for partition_number, file_handle in partition_files.items():
+                    file_handle.close()
+                #for partition_number in range(num_partitions):
+                    file_path = os.path.join(tmpdir,
+                                            f"maptask{task_id:05d}-"
+                                            f"part{partition_number:05d}")
+                    subprocess.run(
+                        ["sort", "-o", file_path, file_path], check=True)
+                    dest_path = os.path.join(
+                        message_dict["output_directory"],
+                        os.path.basename(file_path))
+                    LOGGER.info(
+                        "Moving sorted file %s to %s", file_path, dest_path)
+                    shutil.move(file_path, dest_path)
 
             # Notify task completion
             finished_message = {
