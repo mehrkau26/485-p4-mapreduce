@@ -61,7 +61,7 @@ def tcp_client(host, port, message_dict):
 
             sock.sendall(message.encode('utf-8'))
     except (socket.error, json.JSONDecodeError, OSError) as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred in tcp: {e}")
         return False
     return True
 

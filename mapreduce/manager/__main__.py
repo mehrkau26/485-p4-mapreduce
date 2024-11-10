@@ -82,11 +82,11 @@ class Manager:
             for worker_port, worker_data in self.worker_dict.items():
                 last_time = float(worker_data.get('last_heartbeat', 0))
                 time_difference = current_time - last_time
-                print(f"time_difference: {time_difference}")
+                #print(f"time_difference: {time_difference}")
                 if time_difference > HEARTBEAT_TIMEOUT:
                     if self.worker_dict[worker_port]['status'] != 'Dead':
-                        # LOGGER.warning(f"Worker {worker_port} marked"
-                        #                f"as dead due to missed heartbeats.")
+                        LOGGER.warning(f"Worker {worker_port} marked"
+                                       f"as dead due to missed heartbeats.")
                         self.worker_dict[worker_port]['status'] = 'Dead'
                         self.task_queue.append(worker_data['curr_task'])
             time.sleep(0.1)
@@ -98,8 +98,7 @@ class Manager:
         if message_dict["message_type"] == "register":
             with self.lock:
                 if message_dict['worker_port'] in self.worker_dict:
-                    self.worker_dict[message_dict[
-                        'worker_port']['status']] = 'Ready'
+                    self.worker_dict[message_dict['worker_port']['status']] = 'Ready'
                 else:
                     self.worker_dict[message_dict["worker_port"]] = {
                         'host': message_dict["worker_host"],
