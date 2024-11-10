@@ -45,6 +45,8 @@ class Worker:
         self.start_listening_tcp()
         self.udp_thread = threading.Thread(
              target=self.send_heartbeat)
+        self.registered = False
+        self.udp_thread.start()
         #udp_thread.start()
 
         while not self.signals["shutdown"]:
@@ -56,6 +58,7 @@ class Worker:
                     self.handle_reduce_task(job)
             time.sleep(0.1)
         self.tcp_thread.join()
+        self.udp_thread.join()
         print("job tcp thread joined, job fully shut down")
 
     def start_listening_tcp(self):
@@ -67,7 +70,7 @@ class Worker:
 
     def send_heartbeat(self):
         print("entering send_heartbeat")
-        while not self.signals["shutdown"]:
+        while not self.signals["shutdown"] and self.registered:
             message_dict = {
                 "message_type": "heartbeat",
                 "worker_host": self.host,
@@ -77,7 +80,6 @@ class Worker:
             print("sent heartbeat message")
             time.sleep(HEARTBEAT_INTERVAL)
         self.tcp_thread.join()
-        self.udp_thread.join()
         print("heartbeat thread joined, shutting down")
 
     def register(self):
@@ -94,7 +96,7 @@ class Worker:
         """Fundamental messaging."""
         if message_dict["message_type"] == "register_ack":
             print("starting to send heartbeats")
-            self.udp_thread.start()
+            registered = True
         if message_dict["message_type"] == "new_map_task":
             print("new map task message received")
             self.job_queue.append(message_dict)
