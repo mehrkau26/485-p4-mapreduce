@@ -85,7 +85,8 @@ class Manager:
                 print(f"time_difference: {time_difference}")
                 if time_difference > HEARTBEAT_TIMEOUT:
                     if self.worker_dict[worker_port]['status'] != 'Dead':
-                        LOGGER.warning(f"Worker {worker_port} marked as dead due to missed heartbeats.")
+                        LOGGER.warning(f"Worker {worker_port} marked"
+                                       f"as dead due to missed heartbeats.")
                         self.worker_dict[worker_port]['status'] = 'Dead'
                         self.task_queue.append(worker_data['curr_task'])
             time.sleep(HEARTBEAT_INTERVAL)
