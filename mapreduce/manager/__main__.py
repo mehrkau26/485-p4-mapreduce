@@ -40,10 +40,10 @@ class Manager:
         self.signals = {"shutdown": False}
         self.worker_dict = ThreadSafeOrderedDict()
 
-        tcp_thread = threading.Thread(
+        self.tcp_thread = threading.Thread(
             target=tcp_server, args=(host, port, self.signals,
                                      self.handlemessage))
-        tcp_thread.start()
+        self.tcp_thread.start()
 
         udp_thread = threading.Thread(
             target=udp_server, args=(host, port, self.signals,
@@ -60,7 +60,7 @@ class Manager:
                 self.finished_tasks = 0
                 #print("check")
             time.sleep(0.1)
-        tcp_thread.join()
+        self.tcp_thread.join()
         udp_thread.join()
         print("manager tcp thread joined, manager fully shut down")
 
