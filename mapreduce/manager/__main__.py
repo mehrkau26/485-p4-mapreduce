@@ -61,6 +61,8 @@ class Manager:
                 #print("check")
             time.sleep(0.1)
         self.tcp_thread.join()
+        udp_thread.join()
+        fault_tolerance.join()
         print("manager tcp thread joined, manager fully shut down")
 
     def receive_heartbeats(self, message_dict):

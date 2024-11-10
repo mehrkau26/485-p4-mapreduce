@@ -46,7 +46,7 @@ class Worker:
         self.udp_thread = threading.Thread(
             target=self.send_heartbeat)
         #udp_thread.daemon = True  # This ensures the thread stops when the main program exits
-        #udp_thread.start()
+        self.udp_thread.start()
 
         while not self.signals["shutdown"]:
             if self.job_queue:
@@ -95,7 +95,7 @@ class Worker:
         """Fundamental messaging."""
         if message_dict["message_type"] == "register_ack":
             print("starting to send heartbeats")
-            self.udp_thread.start()
+            #self.udp_thread.start()
         if message_dict["message_type"] == "new_map_task":
             print("new map task message received")
             self.job_queue.append(message_dict)
