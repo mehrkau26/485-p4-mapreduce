@@ -58,7 +58,7 @@ class Manager:
                 self.make_tasks(job)
                 self.num_tasks = 0
                 self.finished_tasks = 0
-                print("check")
+                #print("check")
             time.sleep(0.1)
         self.tcp_thread.join()
         print("manager tcp thread joined, manager fully shut down")
@@ -82,7 +82,7 @@ class Manager:
                     if self.worker_dict[worker_port]['status'] != 'Dead':
                         LOGGER.warning(f"Worker {worker_port} marked as dead due to missed heartbeats.")
                         self.worker_dict[worker_port]['status'] = 'Dead'
-                        self.task_queue.append(worker_data['curr_task'])
+                        self.reassign_tasks(worker_port)
             time.sleep(HEARTBEAT_INTERVAL)
         self.tcp_thread.join()
         print("heartbeat checker thread joined, shutting down")
@@ -103,7 +103,7 @@ class Manager:
                 tcp_client(message_dict["worker_host"],
                            message_dict["worker_port"],
                            register_ack)
-                print("ack sent to worker")
+                #print("ack sent to worker")
 
         if message_dict["message_type"] == "shutdown":
             self.signals["shutdown"] = True
@@ -121,32 +121,34 @@ class Manager:
             self.job_id += 1
 
         if message_dict["message_type"] == "finished":
-            print(
-                f"""finished message recieved from:
-                {message_dict['worker_port']}""")
+            #print(
+                #f"""finished message recieved from:
+                #{message_dict['worker_port']}""")
             worker_port = message_dict['worker_port']
             self.worker_dict[worker_port]['status'] = "Ready"
             self.finished_tasks += 1
             if self.num_tasks == self.finished_tasks:
                 print("finished!")
                 self.finished = True
- 
-    # def reassign_tasks(self, worker_port):
-    #     """Reassign tasks that were assigned to a dead worker"""
-    #     LOGGER.info(f"Reassigning tasks for worker {worker_port}")
-    #     for task in list(self.task_queue):
-    #         if task.get('worker_port') == worker_port:
-    #             task.pop('worker_port', None)
-    #             self.task_queue.appendleft(task)
+    # def next_available_worker(self):
+    #     print("found worker")
+    #     return self.worker_dict[6001]
+    def reassign_tasks(self, worker_port):
+        """Reassign tasks that were assigned to a dead worker"""
+        LOGGER.info(f"Reassigning tasks for worker {worker_port}")
+        for task in list(self.task_queue):
+            if task.get('worker_port') == worker_port:
+                task.pop('worker_port', None)
+                self.task_queue.appendleft(task)
     def assign_tasks(self):
         """Assign tasks to workers."""
         while not self.signals["shutdown"] and not self.finished:
             if self.task_queue:
-                print(len(self.task_queue))
+                #print(len(self.task_queue))
                 assigned = False
                 for worker_port, worker_info in self.worker_dict.items():
                     job = self.task_queue.popleft()
-                    print("looking for worker")
+                    #print("looking for worker")
                     if worker_info['status'] == 'Ready':
                         worker_host = worker_info['host']
                         success = tcp_client(worker_host, worker_port, job)
@@ -155,12 +157,13 @@ class Manager:
                             worker_info['status'] = 'Busy'
                             worker_info['task'] = job
                             assigned = True
+                            worker_info['curr_task'] = job
                             #self.num_tasks += 1
                         else:
                             worker_info['status'] = 'Dead'
                             print("worker is dead")
                     if assigned is False:
-                        print("reassigning")
+                        print("coudn't assign task; reassigning")
                         self.task_queue.appendleft(job)
                 # wait for worker to become available
             # print(f"total tasks: {self.num_tasks} finished tasks: {self.finished_tasks}" )
@@ -181,19 +184,19 @@ class Manager:
         with tempfile.TemporaryDirectory(prefix=prefix) as tmpdir:
             LOGGER.info("Created tmpdir %s", tmpdir)
             input_files = sorted(os.listdir(job["input_directory"]))
-            print("input files", input_files)
+            #print("input files", input_files)
             partitions = [[] for _ in range(job["num_mappers"])]
 
             for i, file in enumerate(input_files):
-                print("entering partition logic", i, file)
+                #print("entering partition logic", i, file)
                 task_id = i % job["num_mappers"]
-                print("task id", task_id)
+                #print("task id", task_id)
                 full_path = os.path.join(job["input_directory"], file)
                 partitions[task_id].append(full_path)
 
             # create message_dict for each task_id and add to task_queue
             for taskid, files in enumerate(partitions):
-                print(f"Task {taskid}: {files}")
+                #print(f"Task {taskid}: {files}")
                 message_dict = {
                     "message_type": "new_map_task",
                     "task_id": taskid,
@@ -220,18 +223,18 @@ class Manager:
         print("entering reduce tasks")
         self.num_tasks = 0
         self.finished_tasks = 0
-        print("reset num_tasks and finished tasks", self.num_tasks)
+        #print("reset num_tasks and finished tasks", self.num_tasks)
         reduce_tasks = [[] for _ in range(job["num_reducers"])]
         input_files = sorted(os.listdir(tmpdir))
 
         for file in input_files:
-            print(f"file from map task: {file}")
+            #print(f"file from map task: {file}")
             part_num = int(file.split("part")[1])
-            print(f"partition numbers: {part_num}")
+            #print(f"partition numbers: {part_num}")
             reduce_tasks[part_num].append(os.path.join(tmpdir, file))
 
         for i , file in enumerate(reduce_tasks):
-            print(f"part_num: {i}, file {file}")
+            #print(f"part_num: {i}, file {file}")
             reduce_task = {
                 "message_type": "new_reduce_task",
                 "task_id": i,
@@ -242,7 +245,7 @@ class Manager:
             self.num_tasks += 1
             self.task_queue.append(reduce_task)
         self.finished = False
-        print("num reduce tasks", self.num_tasks)
+        #print("num reduce tasks", self.num_tasks)
         self.assign_tasks()
         print("finished everything yay")
         self.finished_all = True
