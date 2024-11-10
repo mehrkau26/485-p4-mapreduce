@@ -109,9 +109,13 @@ class Manager:
         if message_dict["message_type"] == "shutdown":
             self.signals["shutdown"] = True
             LOGGER.info("hello")
+            # added because some workers were getting sent shutdown twice
+            shutdown_workers = set()
             for worker_port, worker_info in self.worker_dict.items():
-                worker_host = worker_info["host"]
-                tcp_client(worker_host, worker_port, message_dict)
+                if worker_port not in shutdown_workers:
+                    worker_host = worker_info["host"]
+                    tcp_client(worker_host, worker_port, message_dict)
+                    shutdown_workers.add(worker_port)
             # self.tcp_thread.join()
             print("manager shutting down")
 
@@ -147,7 +151,8 @@ class Manager:
                 #print(len(self.task_queue))
                 assigned = False
                 for worker_port, worker_info in self.worker_dict.items():
-                    job = self.task_queue.popleft()
+                    if self.task_queue:
+                        job = self.task_queue.popleft()
                     #print("looking for worker")
                     if worker_info['status'] == 'Ready':
                         worker_host = worker_info['host']
@@ -165,10 +170,6 @@ class Manager:
                     if assigned is False:
                         print("coudn't assign task; reassigning")
                         self.task_queue.appendleft(job)
-                # wait for worker to become available
-            # print(f"total tasks: {self.num_tasks} finished tasks: {self.finished_tasks}" )
-            # if self.num_tasks == self.finished_tasks:
-            #     self.make_reduce_tasks(job)
             time.sleep(0.1)
 
     def make_tasks(self, job):
