@@ -157,9 +157,6 @@ class Worker:
                                     % (message_dict["num_partitions"])
                                 )
                                 partition_files[partition_number].write(line)
-                                LOGGER.debug(
-                                    "Wrote to partition %s: %s",
-                                    partition_number, line.strip())
 
                 # Move and sort each file to the output directory
                 for partition_number, file_handle in partition_files.items():
