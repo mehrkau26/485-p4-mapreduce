@@ -82,7 +82,7 @@ class Manager:
             for worker_port, worker_data in self.worker_dict.items():
                 last_time = float(worker_data.get('last_heartbeat', 0))
                 time_difference = current_time - last_time
-                print(f"time_difference: {time_difference}")
+                # print(f"time_difference: {time_difference}")
                 if time_difference > HEARTBEAT_TIMEOUT:
                     if self.worker_dict[worker_port]['status'] != 'Dead':
                         # LOGGER.warning(f"Worker {worker_port} marked"

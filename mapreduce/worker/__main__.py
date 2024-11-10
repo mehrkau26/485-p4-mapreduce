@@ -1,4 +1,5 @@
 """MapReduce framework Worker node."""
+from concurrent.futures import ThreadPoolExecutor
 import contextlib
 import os
 import threading
@@ -134,33 +135,28 @@ class Worker:
                     for partition_number in range(
                         num_parts)
                 }
-                for input_path in message_dict["input_paths"]:
-                    with stack.enter_context(
-                      open(input_path, encoding="utf-8",
-                           buffering=8192)) as infile:
-                        map_process = stack.enter_context(
-                            subprocess.Popen(
-                                [message_dict["executable"]],
-                                stdin=infile,
-                                stdout=subprocess.PIPE,
-                                text=True,
-                            )
+                def process_input_file(input_path):
+                    with open(input_path, encoding="utf-8", buffering=8192) as infile:
+                        process = subprocess.Popen(
+                            [message_dict["executable"]],
+                            stdin=infile,
+                            stdout=subprocess.PIPE,
+                            text=True
                         )
                         md = hashlib.md5
-                        for line in map_process.stdout:
-                            # Determine the partition for the line
+                        for line in process.stdout:
                             key = line.split('\t', 1)[0]
-                            partition_number = (
-                                int(md(
-                                    key.
-                                    encode("utf-8")).
-                                    hexdigest(),
-                                    16)
-                                % (num_parts)
-                            )
+                            partition_number = int(md(key.encode("utf-8")).hexdigest(), 16) % num_parts
                             partition_files[partition_number].write(line)
-            for file in partition_files.values():
-                file.close()
+                        process.stdout.close()
+                        process.wait()
+
+                with ThreadPoolExecutor() as executor:
+                    executor.map(process_input_file, message_dict["input_paths"])
+
+                # Close all partition files
+                for file in partition_files.values():
+                    file.close()
 
             # Move and sort each file to the output directory
             for partition_number in range(num_parts):
