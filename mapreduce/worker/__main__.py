@@ -123,8 +123,7 @@ class Worker:
             # Open each input file and process its content
             with contextlib.ExitStack() as stack:
                 partition_files = {
-                    partition_number: stack.enter_context(
-                        open(
+                    partition_number: stack.enter_context(open(
                             os.path.join(
                                 tmpdir,
                                 f"maptask{task_id:05d}-"
@@ -136,45 +135,37 @@ class Worker:
                         num_parts)
                 }
                 for input_path in message_dict["input_paths"]:
-                    with open(
-                        input_path,
-                        encoding="utf-8",
-                        buffering=8192
-                    ) as infile:
-                        with subprocess.Popen(
-                            [message_dict["executable"]],
-                            stdin=infile,
-                            stdout=subprocess.PIPE,
-                            text=True,
-                        ) as map_process:
-                            md = hashlib.md5
-                            for line in map_process.stdout:
-                                # Determine the partition for the line
-                                key = line.split('\t', 1)[0]
-                                partition_number = (
-                                    int(md(
-                                        key.
-                                        encode("utf-8")).
-                                        hexdigest(),
-                                        16)
-                                    % (num_parts)
-                                )
-                                partition_files[partition_number].write(line)
+                    with stack.enter_context(open(input_path, encoding="utf-8", buffering=8192)) as infile:
+                        map_process = stack.enter_context(
+                            subprocess.Popen(
+                                [message_dict["executable"]],
+                                stdin=infile,
+                                stdout=subprocess.PIPE,
+                                text=True,
+                            )
+                        )
+                        md = hashlib.md5
+                        for line in map_process.stdout:
+                            # Determine the partition for the line
+                            key = line.split('\t', 1)[0]
+                            partition_number = (
+                                int(md(
+                                    key.
+                                    encode("utf-8")).
+                                    hexdigest(),
+                                    16)
+                                % (num_parts)
+                            )
+                            partition_files[partition_number].write(line)
+            for file in partition_files.values():
+                file.close()
 
             # Move and sort each file to the output directory
-            for partition_number, file_handle in partition_files.items():
-                file_handle.close()
-                file_path = os.path.join(
-                    tmpdir,
-                    f"maptask{task_id:05d}-"
-                    f"part{partition_number:05d}")
-                subprocess.run(
-                    ["sort", "-o", file_path, file_path], check=True)
-                dest_path = os.path.join(
-                    message_dict["output_directory"],
-                    os.path.basename(file_path))
-                LOGGER.info(
-                    "Moving sorted file %s to %s", file_path, dest_path)
+            for partition_number in range(num_parts):
+                file_path = os.path.join(tmpdir, f"maptask{task_id:05d}-part{partition_number:05d}")
+                subprocess.run(["sort", "-o", file_path, file_path], check=True)
+                dest_path = os.path.join(message_dict["output_directory"], os.path.basename(file_path))
+                LOGGER.info("Moving sorted file %s to %s", file_path, dest_path)
                 shutil.move(file_path, dest_path)
 
             # Notify task completion
@@ -204,14 +195,14 @@ class Worker:
                          encoding="utf-8"
                          )) for input_file in input_paths]
                 with open(output_file_path, "w", encoding="utf-8") as outfile:
-                    with subprocess.Popen(
+                    reduce_process = stack.enter_context(subprocess.Popen(
                         [executable],
                         text=True,
                         stdin=subprocess.PIPE,
                         stdout=outfile,
-                    ) as reduce_process:
-                        for line in heapq.merge(*files):
-                            reduce_process.stdin.write(line)
+                    ))
+                    for line in heapq.merge(*files):
+                        reduce_process.stdin.write(line)
 
             for file in files:
                 file.close()
