@@ -156,22 +156,22 @@ class Manager:
                     if self.task_queue:
                         job = self.task_queue.popleft()
                     # print("looking for worker")
-                    if worker_info['status'] == 'Ready':
-                        worker_host = worker_info['host']
-                        success = tcp_client(worker_host, worker_port, job)
-                        if success:
-                            print("worker assigned to task")
-                            worker_info['status'] = 'Busy'
-                            worker_info['task'] = job
-                            assigned = True
-                            worker_info['curr_task'] = job
-                            # self.num_tasks += 1
-                        else:
-                            worker_info['status'] = 'Dead'
-                            print("worker is dead")
-                    if assigned is False:
-                        print("couldn't assign task; reassigning")
-                        self.task_queue.appendleft(job)
+                        if worker_info['status'] == 'Ready':
+                            worker_host = worker_info['host']
+                            success = tcp_client(worker_host, worker_port, job)
+                            if success:
+                                print("worker assigned to task")
+                                worker_info['status'] = 'Busy'
+                                worker_info['task'] = job
+                                assigned = True
+                                worker_info['curr_task'] = job
+                                # self.num_tasks += 1
+                            else:
+                                worker_info['status'] = 'Dead'
+                                print("worker is dead")
+                        if assigned is False:
+                            print("couldn't assign task; reassigning")
+                            self.task_queue.appendleft(job)
             time.sleep(0.1)
 
     def make_tasks(self, job):
