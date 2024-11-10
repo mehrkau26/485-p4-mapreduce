@@ -98,7 +98,7 @@ class Manager:
         if message_dict["message_type"] == "register":
             with self.lock:
                 if message_dict['worker_port'] in self.worker_dict:
-                    self.worker_dict[message_dict['worker_port']['status']] = 'Ready'
+                    self.worker_dict[message_dict['worker_port']]['status'] = 'Ready'
                 else:
                     self.worker_dict[message_dict["worker_port"]] = {
                         'host': message_dict["worker_host"],
