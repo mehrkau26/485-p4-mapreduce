@@ -62,6 +62,7 @@ class Manager:
             time.sleep(0.1)
         self.tcp_thread.join()
         udp_thread.join()
+        fault_tolerance.join()
         print("manager tcp thread joined, manager fully shut down")
 
     def receive_heartbeats(self, message_dict):
@@ -108,14 +109,11 @@ class Manager:
 
         if message_dict["message_type"] == "shutdown":
             self.signals["shutdown"] = True
-            LOGGER.info("hello")
             # added because some workers were getting sent shutdown twice
-            shutdown_workers = set()
             for worker_port, worker_info in self.worker_dict.items():
-                if worker_port not in shutdown_workers:
+                if worker_info['status'] != 'Dead':
                     worker_host = worker_info["host"]
                     tcp_client(worker_host, worker_port, message_dict)
-                    shutdown_workers.add(worker_port)
             # self.tcp_thread.join()
             print("manager shutting down")
 
