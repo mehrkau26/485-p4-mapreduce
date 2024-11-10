@@ -89,7 +89,7 @@ class Manager:
                                        f"as dead due to missed heartbeats.")
                         self.worker_dict[worker_port]['status'] = 'Dead'
                         self.task_queue.append(worker_data['curr_task'])
-            time.sleep(HEARTBEAT_INTERVAL)
+            time.sleep(0.1)
         self.tcp_thread.join()
         print("heartbeat checker thread joined, shutting down")
 
