@@ -84,6 +84,7 @@ def udp_server(host, port, signals, handle_func):
             handle_func(message_dict)
         print("udp_thread shutdown")
 
+
 def udp_client(host, port, message_dict):
     """Send heartbeats."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
