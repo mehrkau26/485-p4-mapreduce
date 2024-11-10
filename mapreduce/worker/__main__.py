@@ -135,7 +135,7 @@ class Worker:
                         message_dict["num_partitions"])
                 }
                 for input_path in message_dict["input_paths"]:
-                    with open(input_path, encoding="utf-8") as infile:
+                    with open(input_path, encoding="utf-8", buffering=8192) as infile:
                         with subprocess.Popen(
                             [message_dict["executable"]],
                             stdin=infile,
@@ -160,7 +160,6 @@ class Worker:
                 # Move and sort each file to the output directory
                 for partition_number, file_handle in partition_files.items():
                     file_handle.close()
-                # for partition_number in range(num_partitions):
                     file_path = os.path.join(
                         tmpdir,
                         f"maptask{task_id:05d}-"
