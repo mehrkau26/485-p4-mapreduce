@@ -68,6 +68,7 @@ def tcp_client(host, port, message_dict):
 
 def udp_server(host, port, signals, handle_func):
     """Create UDP server."""
+    """Listen for heartbeats"""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((host, port))
@@ -84,7 +85,7 @@ def udp_server(host, port, signals, handle_func):
         print("udp_thread shutdown")
 
 def udp_client(host, port, message_dict):
-    """Listen for heartbeats."""
+    """Send heartbeats."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.connect((host, port))
 
