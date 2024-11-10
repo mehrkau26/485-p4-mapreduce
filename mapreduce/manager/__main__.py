@@ -130,9 +130,7 @@ class Manager:
             if self.num_tasks == self.finished_tasks:
                 print("finished!")
                 self.finished = True
-    # def next_available_worker(self):
-    #     print("found worker")
-    #     return self.worker_dict[6001]
+
     def reassign_tasks(self, worker_port):
         """Reassign tasks that were assigned to a dead worker"""
         LOGGER.info(f"Reassigning tasks for worker {worker_port}")

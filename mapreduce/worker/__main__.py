@@ -44,8 +44,7 @@ class Worker:
         self.register()
         self.start_listening_tcp()
         self.udp_thread = threading.Thread(
-            target=self.send_heartbeat)
-        #udp_thread.daemon = True  # This ensures the thread stops when the main program exits
+             target=self.send_heartbeat)
         #udp_thread.start()
 
         while not self.signals["shutdown"]:
@@ -78,6 +77,7 @@ class Worker:
             print("sent heartbeat message")
             time.sleep(HEARTBEAT_INTERVAL)
         self.tcp_thread.join()
+        self.udp_thread.join()
         print("heartbeat thread joined, shutting down")
 
     def register(self):
