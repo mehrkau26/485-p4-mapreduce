@@ -45,10 +45,10 @@ class Manager:
                                      self.handlemessage))
         self.tcp_thread.start()
 
-        udp_thread = threading.Thread(
+        self.udp_thread = threading.Thread(
             target=udp_server, args=(host, port, self.signals,
                                       self.receive_heartbeats))
-        udp_thread.start()
+        self.udp_thread.start()
         # fault_tolerance = threading.Thread(target=self.heartbeat_checker)
         # fault_tolerance.start()
 
@@ -61,6 +61,7 @@ class Manager:
                 #print("check")
             time.sleep(0.1)
         self.tcp_thread.join()
+        self.udp_thread.join()
         print("manager tcp thread joined, manager fully shut down")
 
     def receive_heartbeats(self, message_dict):
