@@ -45,12 +45,12 @@ class Manager:
                                      self.handlemessage))
         self.tcp_thread.start()
 
-        udp_thread = threading.Thread(
-            target=udp_server, args=(host, port, self.signals,
-                                     self.receive_heartbeats))
-        udp_thread.start()
-        fault_tolerance = threading.Thread(target=self.heartbeat_checker)
-        fault_tolerance.start()
+        # udp_thread = threading.Thread(
+        #     target=udp_server, args=(host, port, self.signals,
+        #                              self.receive_heartbeats))
+        # udp_thread.start()
+        # fault_tolerance = threading.Thread(target=self.heartbeat_checker)
+        # fault_tolerance.start()
 
         while not self.signals["shutdown"]:
             if self.job_queue:
@@ -63,29 +63,29 @@ class Manager:
         self.tcp_thread.join()
         print("manager tcp thread joined, manager fully shut down")
 
-    def receive_heartbeats(self, message_dict):
-        if message_dict["message_type"] == "heartbeat":
-            print(f"received heartbeat from {message_dict['worker_port']}")
-            worker_port = message_dict['worker_port']
-            if worker_port in self.worker_dict:
-                self.worker_dict[worker_port]['last_heartbeat'] = float(time.time())
+    # def receive_heartbeats(self, message_dict):
+    #     if message_dict["message_type"] == "heartbeat":
+    #         print(f"received heartbeat from {message_dict['worker_port']}")
+    #         worker_port = message_dict['worker_port']
+    #         if worker_port in self.worker_dict:
+    #             self.worker_dict[worker_port]['last_heartbeat'] = float(time.time())
 
-    def heartbeat_checker(self):
-        print("start of function heartbeat_checker")
-        """Send heartbeat."""
+    # def heartbeat_checker(self):
+    #     print("start of function heartbeat_checker")
+    #     """Send heartbeat."""
 
-        while not self.signals["shutdown"]:
-            current_time = float(time.time())
-            for worker_port, worker_data in self.worker_dict.items():
-                last_time = float(worker_data.get('last_heartbeat', 0))
-                if current_time - last_time > HEARTBEAT_TIMEOUT:
-                    if self.worker_dict[worker_port]['status'] != 'Dead':
-                        LOGGER.warning(f"Worker {worker_port} marked as dead due to missed heartbeats.")
-                        self.worker_dict[worker_port]['status'] = 'Dead'
-                        self.reassign_tasks(worker_port)
-            time.sleep(HEARTBEAT_INTERVAL)
-        self.tcp_thread.join()
-        print("heartbeat checker thread joined, shutting down")
+    #     while not self.signals["shutdown"]:
+    #         current_time = float(time.time())
+    #         for worker_port, worker_data in self.worker_dict.items():
+    #             last_time = float(worker_data.get('last_heartbeat', 0))
+    #             if current_time - last_time > HEARTBEAT_TIMEOUT:
+    #                 if self.worker_dict[worker_port]['status'] != 'Dead':
+    #                     LOGGER.warning(f"Worker {worker_port} marked as dead due to missed heartbeats.")
+    #                     self.worker_dict[worker_port]['status'] = 'Dead'
+    #                     self.reassign_tasks(worker_port)
+    #         time.sleep(HEARTBEAT_INTERVAL)
+    #     self.tcp_thread.join()
+    #     print("heartbeat checker thread joined, shutting down")
 
     def handlemessage(self, message_dict):
         """Handle all messages."""
