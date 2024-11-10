@@ -130,7 +130,7 @@ class Worker:
                                 f"maptask{task_id:05d}-"
                                 f"part{partition_number:05d}"
                             ),
-                            "a", encoding="utf-8"), buffering=8192
+                            "a", encoding="utf-8")
                     )
                     for partition_number in range(
                         num_parts)
