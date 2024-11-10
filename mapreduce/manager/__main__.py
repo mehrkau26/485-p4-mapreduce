@@ -40,17 +40,17 @@ class Manager:
         self.signals = {"shutdown": False}
         self.worker_dict = ThreadSafeOrderedDict()
 
-        self.tcp_thread = threading.Thread(
+        tcp_thread = threading.Thread(
             target=tcp_server, args=(host, port, self.signals,
                                      self.handlemessage))
-        self.tcp_thread.start()
+        tcp_thread.start()
 
-        self.udp_thread = threading.Thread(
+        udp_thread = threading.Thread(
             target=udp_server, args=(host, port, self.signals,
                                       self.receive_heartbeats))
-        self.udp_thread.start()
-        # fault_tolerance = threading.Thread(target=self.heartbeat_checker)
-        # fault_tolerance.start()
+        udp_thread.start()
+        fault_tolerance = threading.Thread(target=self.heartbeat_checker)
+        fault_tolerance.start()
 
         while not self.signals["shutdown"]:
             if self.job_queue:
@@ -60,8 +60,8 @@ class Manager:
                 self.finished_tasks = 0
                 #print("check")
             time.sleep(0.1)
-        self.tcp_thread.join()
-        self.udp_thread.join()
+        tcp_thread.join()
+        udp_thread.join()
         print("manager tcp thread joined, manager fully shut down")
 
     def receive_heartbeats(self, message_dict):
@@ -71,22 +71,22 @@ class Manager:
             if worker_port in self.worker_dict:
                 self.worker_dict[worker_port]['last_heartbeat'] = float(time.time())
 
-    # def heartbeat_checker(self):
-    #     print("start of function heartbeat_checker")
-    #     """Send heartbeat."""
-
-    #     while not self.signals["shutdown"]:
-    #         current_time = float(time.time())
-    #         for worker_port, worker_data in self.worker_dict.items():
-    #             last_time = float(worker_data.get('last_heartbeat', 0))
-    #             if current_time - last_time > HEARTBEAT_TIMEOUT:
-    #                 if self.worker_dict[worker_port]['status'] != 'Dead':
-    #                     LOGGER.warning(f"Worker {worker_port} marked as dead due to missed heartbeats.")
-    #                     self.worker_dict[worker_port]['status'] = 'Dead'
-    #                     self.reassign_tasks(worker_port)
-    #         time.sleep(HEARTBEAT_INTERVAL)
-    #     self.tcp_thread.join()
-    #     print("heartbeat checker thread joined, shutting down")
+    def heartbeat_checker(self):
+        """Send heartbeat."""
+        while not self.signals["shutdown"]:
+            current_time = float(time.time())
+            for worker_port, worker_data in self.worker_dict.items():
+                last_time = float(worker_data.get('last_heartbeat', 0))
+                time_difference = current_time - last_time
+                print(f"time_difference: {time_difference}")
+                if time_difference > HEARTBEAT_TIMEOUT:
+                    if self.worker_dict[worker_port]['status'] != 'Dead':
+                        LOGGER.warning(f"Worker {worker_port} marked as dead due to missed heartbeats.")
+                        self.worker_dict[worker_port]['status'] = 'Dead'
+                        self.task_queue.append(worker_data['curr_task'])
+            time.sleep(HEARTBEAT_INTERVAL)
+        self.tcp_thread.join()
+        print("heartbeat checker thread joined, shutting down")
 
     def handlemessage(self, message_dict):
         """Handle all messages."""
@@ -132,13 +132,14 @@ class Manager:
                 print("finished!")
                 self.finished = True
 
-    def reassign_tasks(self, worker_port):
-        """Reassign tasks that were assigned to a dead worker"""
-        LOGGER.info(f"Reassigning tasks for worker {worker_port}")
-        for task in list(self.task_queue):
-            if task.get('worker_port') == worker_port:
-                task.pop('worker_port', None)
-                self.task_queue.appendleft(task)
+    # def reassign_tasks(self, worker_port):
+    #     """Reassign tasks that were assigned to a dead worker"""
+    #     LOGGER.info(f"Reassigning tasks for worker {worker_port}")
+    #     for task in list(self.task_queue):
+    #         if task.get('worker_port') == worker_port:
+    #             task.pop('worker_port', None)
+    #             self.task_queue.appendleft(task)
+
     def assign_tasks(self):
         """Assign tasks to workers."""
         while not self.signals["shutdown"] and not self.finished:
