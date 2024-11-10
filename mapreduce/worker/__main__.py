@@ -22,6 +22,7 @@ LOGGER = logging.getLogger(__name__)
 
 HEARTBEAT_INTERVAL = 2  # 1 ping is 2 seconds
 
+
 class Worker:
     """A class representing a Worker node in a MapReduce cluster."""
 
@@ -46,7 +47,6 @@ class Worker:
         self.udp_thread = threading.Thread(
              target=self.send_heartbeat)
         self.udp_thread.start()
-        #udp_thread.start()
 
         while not self.signals["shutdown"]:
             if self.job_queue:
@@ -68,6 +68,7 @@ class Worker:
         self.tcp_thread.start()
 
     def send_heartbeat(self):
+        """Send heartbeat every 2 seconds."""
         print("entering send_heartbeat")
         while not self.signals["shutdown"]:
             print("i'm alive!")
@@ -125,10 +126,13 @@ class Worker:
                         open(
                             os.path.join(
                                 tmpdir,
-                                f"maptask{task_id:05d}-part{partition_number:05d}"),
-                                "a", encoding="utf-8")
+                                f"maptask{task_id:05d}-"
+                                f"part{partition_number:05d}"
+                            ),
+                            "a", encoding="utf-8")
                     )
-                    for partition_number in range(message_dict["num_partitions"])
+                    for partition_number in range(
+                        message_dict["num_partitions"])
                 }
                 for input_path in message_dict["input_paths"]:
                     with open(input_path, encoding="utf-8") as infile:
@@ -142,7 +146,9 @@ class Worker:
                                 # Determine the partition for the line
                                 partition_number = (
                                     int(hashlib.md5(
-                                        line.split('\t')[0].encode("utf-8")).hexdigest(),
+                                        line.split('\t')[0].
+                                        encode("utf-8")).
+                                        hexdigest(),
                                         16)
                                     % (message_dict["num_partitions"])
                                 )
@@ -155,9 +161,10 @@ class Worker:
                 for partition_number, file_handle in partition_files.items():
                     file_handle.close()
                 # for partition_number in range(num_partitions):
-                    file_path = os.path.join(tmpdir,
-                                            f"maptask{task_id:05d}-"
-                                            f"part{partition_number:05d}")
+                    file_path = os.path.join(
+                        tmpdir,
+                        f"maptask{task_id:05d}-"
+                        f"part{partition_number:05d}")
                     subprocess.run(
                         ["sort", "-o", file_path, file_path], check=True)
                     dest_path = os.path.join(
@@ -190,13 +197,15 @@ class Worker:
             output_file_path = os.path.join(tmpdir, f"part-{task_id:05d}")
             with contextlib.ExitStack() as stack:
                 files = [stack.enter_context(
-                    open(input_file, encoding="utf-8")) for input_file in input_paths]
+                    open(input_file,
+                         encoding="utf-8"
+                         )) for input_file in input_paths]
                 with open(output_file_path, "w", encoding="utf-8") as outfile:
                     with subprocess.Popen(
                         [executable],
-                        text = True,
+                        text=True,
                         stdin=subprocess.PIPE,
-                        stdout = outfile,
+                        stdout=outfile,
                     ) as reduce_process:
                         for line in heapq.merge(*files):
                             reduce_process.stdin.write(line)
@@ -207,8 +216,9 @@ class Worker:
             with open(output_file_path, 'r', encoding='utf-8') as outfile:
                 print(outfile.read())
 
-            dest_path = os.path.join(message_dict["output_directory"],
-                                    os.path.basename(output_file_path))
+            dest_path = os.path.join(
+                message_dict["output_directory"],
+                os.path.basename(output_file_path))
             LOGGER.info(
                 "Moving sorted file %s to %s", output_file_path, dest_path)
             shutil.move(output_file_path, dest_path)
