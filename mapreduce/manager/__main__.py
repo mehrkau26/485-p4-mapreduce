@@ -163,7 +163,7 @@ class Manager:
                             worker_info['status'] = 'Dead'
                             print("worker is dead")
                     if assigned is False:
-                        print("coudn't assign task; reassigning")
+                        print("couldn't assign task; reassigning")
                         self.task_queue.appendleft(job)
                 # wait for worker to become available
             # print(f"total tasks: {self.num_tasks} finished tasks: {self.finished_tasks}" )
