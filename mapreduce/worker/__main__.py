@@ -45,7 +45,6 @@ class Worker:
         self.start_listening_tcp()
         self.udp_thread = threading.Thread(
              target=self.send_heartbeat)
-        self.registered = False
         self.udp_thread.start()
         #udp_thread.start()
 
@@ -70,7 +69,8 @@ class Worker:
 
     def send_heartbeat(self):
         print("entering send_heartbeat")
-        while not self.signals["shutdown"] and self.registered:
+        while not self.signals["shutdown"]:
+            print("i'm alive!")
             message_dict = {
                 "message_type": "heartbeat",
                 "worker_host": self.host,
@@ -96,7 +96,7 @@ class Worker:
         """Fundamental messaging."""
         if message_dict["message_type"] == "register_ack":
             print("starting to send heartbeats")
-            registered = True
+            self.registered = True
         if message_dict["message_type"] == "new_map_task":
             print("new map task message received")
             self.job_queue.append(message_dict)

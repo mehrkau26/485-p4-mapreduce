@@ -45,10 +45,10 @@ class Manager:
                                      self.handlemessage))
         self.tcp_thread.start()
 
-        # udp_thread = threading.Thread(
-        #     target=udp_server, args=(host, port, self.signals,
-        #                              self.receive_heartbeats))
-        # udp_thread.start()
+        udp_thread = threading.Thread(
+            target=udp_server, args=(host, port, self.signals,
+                                      self.receive_heartbeats))
+        udp_thread.start()
         # fault_tolerance = threading.Thread(target=self.heartbeat_checker)
         # fault_tolerance.start()
 
@@ -63,12 +63,12 @@ class Manager:
         self.tcp_thread.join()
         print("manager tcp thread joined, manager fully shut down")
 
-    # def receive_heartbeats(self, message_dict):
-    #     if message_dict["message_type"] == "heartbeat":
-    #         print(f"received heartbeat from {message_dict['worker_port']}")
-    #         worker_port = message_dict['worker_port']
-    #         if worker_port in self.worker_dict:
-    #             self.worker_dict[worker_port]['last_heartbeat'] = float(time.time())
+    def receive_heartbeats(self, message_dict):
+        if message_dict["message_type"] == "heartbeat":
+            print(f"received heartbeat from {message_dict['worker_port']}")
+            worker_port = message_dict['worker_port']
+            if worker_port in self.worker_dict:
+                self.worker_dict[worker_port]['last_heartbeat'] = float(time.time())
 
     # def heartbeat_checker(self):
     #     print("start of function heartbeat_checker")
