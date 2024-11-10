@@ -135,7 +135,11 @@ class Worker:
                         message_dict["num_partitions"])
                 }
                 for input_path in message_dict["input_paths"]:
-                    with open(input_path, encoding="utf-8", buffering=8192) as infile:
+                    with open(
+                        input_path,
+                        encoding="utf-8",
+                        buffering=8192
+                    ) as infile:
                         with subprocess.Popen(
                             [message_dict["executable"]],
                             stdin=infile,
