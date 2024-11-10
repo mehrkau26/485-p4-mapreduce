@@ -17,7 +17,8 @@ from mapreduce.utils import ThreadSafeOrderedDict
 LOGGER = logging.getLogger(__name__)
 
 HEARTBEAT_INTERVAL = 2  # 1 ping is 2 seconds
-HEARTBEAT_TIMEOUT = 10  #10 seconds or 5 pings)
+HEARTBEAT_TIMEOUT = 10  # 10 seconds or 5 pings)
+
 
 class Manager:
     """Represent a MapReduce framework Manager node."""
@@ -47,7 +48,7 @@ class Manager:
 
         udp_thread = threading.Thread(
             target=udp_server, args=(host, port, self.signals,
-                                      self.receive_heartbeats))
+                                     self.receive_heartbeats))
         udp_thread.start()
         fault_tolerance = threading.Thread(target=self.heartbeat_checker)
         fault_tolerance.start()
@@ -58,7 +59,7 @@ class Manager:
                 self.make_tasks(job)
                 self.num_tasks = 0
                 self.finished_tasks = 0
-                #print("check")
+                # print("check")
             time.sleep(0.1)
         self.tcp_thread.join()
         udp_thread.join()
@@ -66,11 +67,13 @@ class Manager:
         print("manager tcp thread joined, manager fully shut down")
 
     def receive_heartbeats(self, message_dict):
+        """Heartbeat time."""
         if message_dict["message_type"] == "heartbeat":
             print(f"received heartbeat from {message_dict['worker_port']}")
             worker_port = message_dict['worker_port']
             if worker_port in self.worker_dict:
-                self.worker_dict[worker_port]['last_heartbeat'] = float(time.time())
+                self.worker_dict[worker_port]['last_heartbeat'] = float(
+                    time.time())
 
     def heartbeat_checker(self):
         """Send heartbeat."""
@@ -82,7 +85,9 @@ class Manager:
                 print(f"time_difference: {time_difference}")
                 if time_difference > HEARTBEAT_TIMEOUT:
                     if self.worker_dict[worker_port]['status'] != 'Dead':
-                        LOGGER.warning(f"Worker {worker_port} marked as dead due to missed heartbeats.")
+                        LOGGER.warning(
+                            f"Worker {worker_port}"
+                            f"marked as dead due to missed heartbeats.")
                         self.worker_dict[worker_port]['status'] = 'Dead'
                         self.task_queue.append(worker_data['curr_task'])
             time.sleep(HEARTBEAT_INTERVAL)
@@ -105,7 +110,7 @@ class Manager:
                 tcp_client(message_dict["worker_host"],
                            message_dict["worker_port"],
                            register_ack)
-                #print("ack sent to worker")
+                # print("ack sent to worker")
 
         if message_dict["message_type"] == "shutdown":
             self.signals["shutdown"] = True
@@ -124,9 +129,9 @@ class Manager:
             self.job_id += 1
 
         if message_dict["message_type"] == "finished":
-            #print(
-                #f"""finished message recieved from:
-                #{message_dict['worker_port']}""")
+            # print(
+            #   f"""finished message recieved from:
+            #   {message_dict['worker_port']}""")
             worker_port = message_dict['worker_port']
             self.worker_dict[worker_port]['status'] = "Ready"
             self.finished_tasks += 1
@@ -146,12 +151,12 @@ class Manager:
         """Assign tasks to workers."""
         while not self.signals["shutdown"] and not self.finished:
             if self.task_queue:
-                #print(len(self.task_queue))
+                # print(len(self.task_queue))
                 assigned = False
                 for worker_port, worker_info in self.worker_dict.items():
                     if self.task_queue:
                         job = self.task_queue.popleft()
-                    #print("looking for worker")
+                    # print("looking for worker")
                     if worker_info['status'] == 'Ready':
                         worker_host = worker_info['host']
                         success = tcp_client(worker_host, worker_port, job)
@@ -161,7 +166,7 @@ class Manager:
                             worker_info['task'] = job
                             assigned = True
                             worker_info['curr_task'] = job
-                            #self.num_tasks += 1
+                            # self.num_tasks += 1
                         else:
                             worker_info['status'] = 'Dead'
                             print("worker is dead")
@@ -183,19 +188,19 @@ class Manager:
         with tempfile.TemporaryDirectory(prefix=prefix) as tmpdir:
             LOGGER.info("Created tmpdir %s", tmpdir)
             input_files = sorted(os.listdir(job["input_directory"]))
-            #print("input files", input_files)
+            # print("input files", input_files)
             partitions = [[] for _ in range(job["num_mappers"])]
 
             for i, file in enumerate(input_files):
-                #print("entering partition logic", i, file)
+                # print("entering partition logic", i, file)
                 task_id = i % job["num_mappers"]
-                #print("task id", task_id)
+                # print("task id", task_id)
                 full_path = os.path.join(job["input_directory"], file)
                 partitions[task_id].append(full_path)
 
             # create message_dict for each task_id and add to task_queue
             for taskid, files in enumerate(partitions):
-                #print(f"Task {taskid}: {files}")
+                # print(f"Task {taskid}: {files}")
                 message_dict = {
                     "message_type": "new_map_task",
                     "task_id": taskid,
@@ -217,23 +222,23 @@ class Manager:
             # DO MAP STAGE WORK THEN SET FINISHED TO TRUE
         LOGGER.info("Cleaned up tmpdir %s", tmpdir)
 
-    def make_reduce_tasks(self,job, tmpdir):
+    def make_reduce_tasks(self, job, tmpdir):
         """Reduce tasks."""
         print("entering reduce tasks")
         self.num_tasks = 0
         self.finished_tasks = 0
-        #print("reset num_tasks and finished tasks", self.num_tasks)
+        # print("reset num_tasks and finished tasks", self.num_tasks)
         reduce_tasks = [[] for _ in range(job["num_reducers"])]
         input_files = sorted(os.listdir(tmpdir))
 
         for file in input_files:
-            #print(f"file from map task: {file}")
+            # print(f"file from map task: {file}")
             part_num = int(file.split("part")[1])
-            #print(f"partition numbers: {part_num}")
+            # print(f"partition numbers: {part_num}")
             reduce_tasks[part_num].append(os.path.join(tmpdir, file))
 
-        for i , file in enumerate(reduce_tasks):
-            #print(f"part_num: {i}, file {file}")
+        for i, file in enumerate(reduce_tasks):
+            # print(f"part_num: {i}, file {file}")
             reduce_task = {
                 "message_type": "new_reduce_task",
                 "task_id": i,
@@ -244,7 +249,7 @@ class Manager:
             self.num_tasks += 1
             self.task_queue.append(reduce_task)
         self.finished = False
-        #print("num reduce tasks", self.num_tasks)
+        # print("num reduce tasks", self.num_tasks)
         self.assign_tasks()
         print("finished everything yay")
         self.finished_all = True
