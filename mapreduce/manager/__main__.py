@@ -84,11 +84,11 @@ class Manager:
                 time_difference = current_time - last_time
                 print(f"time_difference: {time_difference}")
                 if time_difference > HEARTBEAT_TIMEOUT:
-                    if self.worker_dict[worker_port]['status'] != 'Dead':
+                    if worker_data['status'] != 'Dead':
                         LOGGER.warning("Worker %s marked as dead due to"
                                        "missed heartbeats.",
                                        worker_port)
-                        self.worker_dict[worker_port]['status'] = 'Dead'
+                        worker_data['status'] = 'Dead'
                         self.task_queue.append(worker_data['curr_task'])
             time.sleep(HEARTBEAT_INTERVAL)
         self.tcp_thread.join()
