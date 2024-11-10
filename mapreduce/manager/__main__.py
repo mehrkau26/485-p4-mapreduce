@@ -95,7 +95,7 @@ class Manager:
                 self.worker_dict[message_dict["worker_port"]] = {
                     'host': message_dict["worker_host"],
                     'status': 'Ready',
-                    'last_heartbeat': 0,
+                    'last_heartbeat': float(time.time()),
                     'curr_task': ''
                 }
                 register_ack = {
