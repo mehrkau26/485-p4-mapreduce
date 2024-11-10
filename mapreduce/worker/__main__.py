@@ -135,7 +135,9 @@ class Worker:
                         num_parts)
                 }
                 for input_path in message_dict["input_paths"]:
-                    with stack.enter_context(open(input_path, encoding="utf-8", buffering=8192)) as infile:
+                    with stack.enter_context(
+                      open(input_path, encoding="utf-8",
+                           buffering=8192)) as infile:
                         map_process = stack.enter_context(
                             subprocess.Popen(
                                 [message_dict["executable"]],
@@ -162,10 +164,16 @@ class Worker:
 
             # Move and sort each file to the output directory
             for partition_number in range(num_parts):
-                file_path = os.path.join(tmpdir, f"maptask{task_id:05d}-part{partition_number:05d}")
-                subprocess.run(["sort", "-o", file_path, file_path], check=True)
-                dest_path = os.path.join(message_dict["output_directory"], os.path.basename(file_path))
-                LOGGER.info("Moving sorted file %s to %s", file_path, dest_path)
+                file_path = os.path.join(tmpdir,
+                                         f"maptask{task_id:05d}"
+                                         f"-part{partition_number:05d}")
+                subprocess.run(
+                    ["sort", "-o", file_path, file_path], check=True)
+                dest_path = os.path.join(
+                    message_dict["output_directory"],
+                    os.path.basename(file_path))
+                LOGGER.info(
+                    "Moving sorted file %s to %s", file_path, dest_path)
                 shutil.move(file_path, dest_path)
 
             # Notify task completion
