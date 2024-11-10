@@ -67,9 +67,10 @@ class Manager:
         if message_dict["message_type"] == "heartbeat":
             print(f"received heartbeat from {message_dict['worker_port']}")
             worker_port = message_dict['worker_port']
-            self.worker_dict[worker_port]['last_heartbeat'] = float(time.time())
+            if worker_port in self.worker_dict:
+                self.worker_dict[worker_port]['last_heartbeat'] = float(time.time())
 
-    def heartbeat_checker(self, message_dict):
+    def heartbeat_checker(self):
         print("start of function heartbeat_checker")
         """Send heartbeat."""
 
@@ -81,7 +82,7 @@ class Manager:
                     if self.worker_dict[worker_port]['status'] != 'Dead':
                         LOGGER.warning(f"Worker {worker_port} marked as dead due to missed heartbeats.")
                         self.worker_dict[worker_port]['status'] = 'Dead'
-                        self.reassign_tasks(worker_port)
+                        self.task_queue.append(worker_data['curr_task'])
             time.sleep(HEARTBEAT_INTERVAL)
         self.tcp_thread.join()
         print("heartbeat checker thread joined, shutting down")
@@ -93,7 +94,8 @@ class Manager:
                 self.worker_dict[message_dict["worker_port"]] = {
                     'host': message_dict["worker_host"],
                     'status': 'Ready',
-                    'last_heartbeat': 0
+                    'last_heartbeat': 0,
+                    'curr_task': ''
                 }
                 register_ack = {
                     "message_type": "register_ack"
@@ -128,16 +130,14 @@ class Manager:
             if self.num_tasks == self.finished_tasks:
                 print("finished!")
                 self.finished = True
-    # def next_available_worker(self):
-    #     print("found worker")
-    #     return self.worker_dict[6001]
-    def reassign_tasks(self, worker_port):
-        """Reassign tasks that were assigned to a dead worker"""
-        LOGGER.info(f"Reassigning tasks for worker {worker_port}")
-        for task in list(self.task_queue):
-            if task.get('worker_port') == worker_port:
-                task.pop('worker_port', None)
-                self.task_queue.appendleft(task)
+ 
+    # def reassign_tasks(self, worker_port):
+    #     """Reassign tasks that were assigned to a dead worker"""
+    #     LOGGER.info(f"Reassigning tasks for worker {worker_port}")
+    #     for task in list(self.task_queue):
+    #         if task.get('worker_port') == worker_port:
+    #             task.pop('worker_port', None)
+    #             self.task_queue.appendleft(task)
     def assign_tasks(self):
         """Assign tasks to workers."""
         while not self.signals["shutdown"] and not self.finished:
@@ -153,6 +153,7 @@ class Manager:
                         if success:
                             print("worker assigned to task")
                             worker_info['status'] = 'Busy'
+                            worker_info['task'] = job
                             assigned = True
                             #self.num_tasks += 1
                         else:
