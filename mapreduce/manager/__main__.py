@@ -84,7 +84,7 @@ class Manager:
                         self.worker_dict[worker_port]['status'] = 'Dead'
                         self.reassign_tasks(worker_port)
             time.sleep(HEARTBEAT_INTERVAL)
-        self.tcp_thread.join()
+        #self.tcp_thread.join()
         print("heartbeat checker thread joined, shutting down")
 
     def handlemessage(self, message_dict):

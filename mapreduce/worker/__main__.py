@@ -57,6 +57,7 @@ class Worker:
                     self.handle_reduce_task(job)
             time.sleep(0.1)
         self.tcp_thread.join()
+        self.udp_thread.join()
         print("job tcp thread joined, job fully shut down")
 
     def start_listening_tcp(self):
