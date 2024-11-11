@@ -135,8 +135,10 @@ class Worker:
                     for partition_number in range(
                         num_parts)
                 }
+
                 def process_input_file(input_path):
-                    with open(input_path, encoding="utf-8", buffering=8192) as infile:
+                    with open(input_path, encoding="utf-8",
+                              buffering=8192) as infile:
                         process = subprocess.Popen(
                             [message_dict["executable"]],
                             stdin=infile,
@@ -146,13 +148,16 @@ class Worker:
                         md = hashlib.md5
                         for line in process.stdout:
                             key = line.split('\t', 1)[0]
-                            partition_number = int(md(key.encode("utf-8")).hexdigest(), 16) % num_parts
+                            partition_number = int(
+                                md(key.encode("utf-8")).hexdigest(),
+                                16) % num_parts
                             partition_files[partition_number].write(line)
                         process.stdout.close()
                         process.wait()
 
                 with ThreadPoolExecutor() as executor:
-                    executor.map(process_input_file, message_dict["input_paths"])
+                    executor.map(
+                        process_input_file, message_dict["input_paths"])
 
                 # Close all partition files
                 for file in partition_files.values():
