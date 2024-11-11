@@ -112,29 +112,33 @@ class Worker:
             print("worker shutting down")
 
     def handle_map_task(self, message_dict):
-        """Partition & assign workers with memory optimization."""
+        """Partition & assign workers."""
         task_id = message_dict["task_id"]
 
         # Temporary directory for new map task
-        with tempfile.TemporaryDirectory(prefix=f"mapreduce-local-task{task_id:05d}-") as tmpdir:
-            LOGGER.info("Created temporary output files in directory %s", tmpdir)
+        with tempfile.TemporaryDirectory(
+          prefix=f"mapreduce-local-task{task_id:05d}-") as tmpdir:
+            LOGGER.info("Created temporary output files in directory %s",
+                        tmpdir)
             num_parts = message_dict["num_partitions"]
-
-            # Use lazy initialization and streaming writes to avoid holding too much in memory
+            # Open each input file and process its content
             with contextlib.ExitStack() as stack:
                 partition_files = {
                     partition_number: stack.enter_context(open(
                             os.path.join(
                                 tmpdir,
-                                f"maptask{task_id:05d}-part{partition_number:05d}"
+                                f"maptask{task_id:05d}-"
+                                f"part{partition_number:05d}"
                             ),
-                            "a", encoding="utf-8", buffering=8192  # Buffered write
-                        ))
-                    for partition_number in range(num_parts)
+                            "a", encoding="utf-8")
+                    )
+                    for partition_number in range(
+                        num_parts)
                 }
 
                 def process_input_file(input_path):
-                    with open(input_path, encoding="utf-8", buffering=8192) as infile:
+                    with open(input_path, encoding="utf-8",
+                              buffering=8192) as infile:
                         process = subprocess.Popen(
                             [message_dict["executable"]],
                             stdin=infile,
@@ -144,23 +148,33 @@ class Worker:
                         md = hashlib.md5
                         for line in process.stdout:
                             key = line.split('\t', 1)[0]
-                            partition_number = int(md(key.encode("utf-8")).hexdigest(), 16) % num_parts
+                            partition_number = int(
+                                md(key.encode("utf-8")).hexdigest(),
+                                16) % num_parts
                             partition_files[partition_number].write(line)
-
                         process.stdout.close()
                         process.wait()
 
                 with ThreadPoolExecutor() as executor:
-                    executor.map(process_input_file, message_dict["input_paths"])
+                    executor.map(
+                        process_input_file, message_dict["input_paths"])
 
-            # Close partition files (ExitStack ensures closure)
+                # Close all partition files
+                for file in partition_files.values():
+                    file.close()
 
-            # Move and sort each file to the output directory using external sorting
+            # Move and sort each file to the output directory
             for partition_number in range(num_parts):
-                file_path = os.path.join(tmpdir, f"maptask{task_id:05d}-part{partition_number:05d}")
-                subprocess.run(["sort", "-o", file_path, file_path], check=True)
-                dest_path = os.path.join(message_dict["output_directory"], os.path.basename(file_path))
-                LOGGER.info("Moving sorted file %s to %s", file_path, dest_path)
+                file_path = os.path.join(tmpdir,
+                                         f"maptask{task_id:05d}"
+                                         f"-part{partition_number:05d}")
+                subprocess.run(
+                    ["sort", "-o", file_path, file_path], check=True)
+                dest_path = os.path.join(
+                    message_dict["output_directory"],
+                    os.path.basename(file_path))
+                LOGGER.info(
+                    "Moving sorted file %s to %s", file_path, dest_path)
                 shutil.move(file_path, dest_path)
 
             # Notify task completion
@@ -172,17 +186,24 @@ class Worker:
             }
             tcp_client(self.manager_host, self.manager_port, finished_message)
 
+        # while not self.signals["shutdown"]:
+        # time.sleep(0.1)
+
     def handle_reduce_task(self, message_dict):
-        """Reduce task with memory optimization."""
+        """Reduce task."""
         task_id = message_dict["task_id"]
         input_paths = message_dict["input_paths"]
         executable = message_dict["executable"]
 
-        with tempfile.TemporaryDirectory(prefix=f"mapreduce-local-task{task_id:05d}-") as tmpdir:
+        with tempfile.TemporaryDirectory(
+          prefix=f"mapreduce-local-task{task_id:05d}-") as tmpdir:
             output_file_path = os.path.join(tmpdir, f"part-{task_id:05d}")
             with contextlib.ExitStack() as stack:
-                files = (stack.enter_context(open(input_file, encoding="utf-8")) for input_file in input_paths)
-                with open(output_file_path, "w", encoding="utf-8", buffering=8192) as outfile:
+                files = [stack.enter_context(
+                    open(input_file,
+                         encoding="utf-8"
+                         )) for input_file in input_paths]
+                with open(output_file_path, "w", encoding="utf-8") as outfile:
                     reduce_process = stack.enter_context(subprocess.Popen(
                         [executable],
                         text=True,
@@ -192,21 +213,27 @@ class Worker:
                     for line in heapq.merge(*files):
                         reduce_process.stdin.write(line)
 
-                    reduce_process.stdin.close()  # Close stdin to signal end of input
-                    reduce_process.wait()
+            for file in files:
+                file.close()
+            # Check the contents of the output file for verification
+            with open(output_file_path, 'r', encoding='utf-8') as outfile:
+                print(outfile.read())
 
-            # Check and move the output file
-            dest_path = os.path.join(message_dict["output_directory"], os.path.basename(output_file_path))
-            LOGGER.info("Moving output file %s to %s", output_file_path, dest_path)
+            dest_path = os.path.join(
+                message_dict["output_directory"],
+                os.path.basename(output_file_path))
+            LOGGER.info(
+                "Moving sorted file %s to %s", output_file_path, dest_path)
             shutil.move(output_file_path, dest_path)
 
-        # Notify completion
+        # move to final output directory here
+
         finished_message = {
-            "message_type": "finished",
-            "task_id": task_id,
-            "worker_host": self.host,
-            "worker_port": self.port
-        }
+                "message_type": "finished",
+                "task_id": task_id,
+                "worker_host": self.host,
+                "worker_port": self.port
+            }
         tcp_client(self.manager_host, self.manager_port, finished_message)
         LOGGER.info("Sent finished reducer message to Manager")
 
