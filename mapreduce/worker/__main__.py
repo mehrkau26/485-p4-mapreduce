@@ -59,7 +59,6 @@ class Worker:
             time.sleep(0.1)
         self.tcp_thread.join()
         self.udp_thread.join()
-        print("job tcp thread joined, job fully shut down")
 
     def start_listening_tcp(self):
         """Start TCP thread."""
@@ -70,19 +69,15 @@ class Worker:
 
     def send_heartbeat(self):
         """Send heartbeat every 2 seconds."""
-        print("entering send_heartbeat")
         while not self.signals["shutdown"]:
-            print("i'm alive!")
             message_dict = {
                 "message_type": "heartbeat",
                 "worker_host": self.host,
                 "worker_port": self.port
             }
             udp_client(self.manager_host, self.manager_port, message_dict)
-            print("sent heartbeat message")
             time.sleep(HEARTBEAT_INTERVAL)
         self.tcp_thread.join()
-        print("heartbeat thread joined, shutting down")
 
     def register(self):
         """Register workers."""
@@ -215,15 +210,9 @@ class Worker:
 
             for file in files:
                 file.close()
-            # Check the contents of the output file for verification
-            with open(output_file_path, 'r', encoding='utf-8') as outfile:
-                print(outfile.read())
-
             dest_path = os.path.join(
                 message_dict["output_directory"],
                 os.path.basename(output_file_path))
-            LOGGER.info(
-                "Moving sorted file %s to %s", output_file_path, dest_path)
             shutil.move(output_file_path, dest_path)
 
         # move to final output directory here
