@@ -50,6 +50,7 @@ class Manager:
             target=udp_server, args=(host, port, self.signals,
                                      self.receive_heartbeats))
         udp_thread.start()
+        time.sleep(0.1)
         fault_tolerance = threading.Thread(target=self.heartbeat_checker)
         fault_tolerance.start()
 
