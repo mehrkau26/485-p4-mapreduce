@@ -60,7 +60,7 @@ def tcp_client(host, port, message_dict):
             print("message being sent: ", message)
 
             sock.sendall(message.encode('utf-8'))
-    except (socket.error, json.JSONDecodeError, OSError) as e:
+    except (socket.error) as e:
         print(f"An error occurred in tcp: {e}")
         return False
     return True
